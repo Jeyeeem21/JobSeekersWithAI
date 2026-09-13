@@ -1,15 +1,14 @@
 import { useState } from 'react'
 import { 
-  User, Briefcase, GraduationCap, TrendingUp, Target, CheckCircle2, 
-  AlertCircle, FileText, Sparkles, ArrowRight, MapPin, Award, Lightbulb, 
-  Building2, Calendar, Clock, DollarSign, X
+  Briefcase, GraduationCap, Target, CheckCircle2, 
+  AlertCircle, FileText, Sparkles, MapPin, Lightbulb, 
+  Building2, Clock
 } from 'lucide-react'
 import { 
   PageTitle, StatCard, Panel, Alert, Button, Badge, ProgressBar, Field, Modal, ConfirmationDialog, Tabs
 } from '../components/ui'
-import { entrepreneurshipRecommendations } from '../data/residentData'
 import { useResidentModel, setResidentState } from '../data/demoModels'
-import { applyForJob, updateApplication, registerTraining as createRegistration, updateRegistration, uid, today } from '../data/demoStore'
+import { applyForJob, updateApplication, registerTraining as createRegistration, updateRegistration, reassessCareer, today } from '../data/demoStore'
 import { CareerProfile } from './resident/CareerProfile'
 import { RecordEditor } from '../components/RecordEditor'
 import { Metrics, Facts, Status } from './lgu/Workspace'
@@ -29,7 +28,7 @@ const modules = {
 const formatDate = (dateStr) => new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 
 export function ResidentDashboard({ page, navigate, showMessage }) {
-  const { state, demoResident, recommendedJobs, recommendedTraining, skillGaps, progressTimeline } = useResidentModel()
+  const { state, demoResident, recommendedJobs, recommendedTraining, skillGaps, progressTimeline, entrepreneurshipRecommendations, reassessment } = useResidentModel()
   const setState = setResidentState
   const [modal, setModal] = useState(null)
   const [path, query] = page.split('?')
@@ -47,6 +46,7 @@ const close = () => setModal(null)
       `${job.title} - ${job.matchScore}% Match`,
       [
         ['Match Score', `${job.matchScore}%`],
+        ['Calculation', job.explanation],
         ['Company', job.company],
         ['Location', job.location],
         ['Employment Type', job.employmentType],
@@ -193,7 +193,7 @@ const close = () => setModal(null)
 
   // View Skill Gap
   const viewSkillGap = (gap) => {
-    const relatedTraining = recommendedTraining.filter(t => t.skillGapAddressed === gap.skill)
+    const relatedTraining = recommendedTraining.filter(t => t.coveredGaps?.includes(gap.skill))
     details(
       gap.skill,
       [
@@ -244,7 +244,8 @@ const close = () => setModal(null)
       [
         ['Training Program', training.title],
         ['Provider', training.provider],
-        ['Relevance', training.relevance],
+        ['Relevance', `${training.relevance} (${training.relevanceScore}%)`],
+        ['Next Step', training.suggestedNextStep],
         ['Skill Gap Addressed', training.skillGapAddressed]
       ],
       <>
@@ -388,7 +389,7 @@ const close = () => setModal(null)
       [
         ['Business Type', business.title],
         ['Category', business.category],
-        ['Compatibility', business.compatibility],
+        ['Compatibility', `${business.compatibility} (${business.compatibilityScore}%)`],
         ['Target Market', business.targetMarket],
         ['Description', business.description],
         ['Estimated Startup Capital', `₱${business.estimatedStartup.min.toLocaleString()} - ₱${business.estimatedStartup.max.toLocaleString()}`],
@@ -515,7 +516,7 @@ const close = () => setModal(null)
         </div>
 
         <div className="lgu-grid">
-          <Panel title="Top Job Match" description="Highest match for your profile">
+          {topJob ? <Panel title="Top Job Match" description="Highest match for your profile">
             <div style={{ padding: '0 22px 22px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '16px', marginBottom: '16px' }}>
                 <div>
@@ -544,9 +545,9 @@ const close = () => setModal(null)
                 </Button>
               </div>
             </div>
-          </Panel>
+          </Panel> : <Panel title="Top Job Match"><p className="profile-section-body">No open vacancies available.</p></Panel>}
 
-          <Panel title="Priority Skill Gap" description="Focus area for development">
+          {topSkillGap ? <Panel title="Priority Skill Gap" description="Focus area for development">
             <div style={{ padding: '0 22px 22px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <h3 style={{ fontSize: '16px', fontWeight: '600' }}>{topSkillGap.skill}</h3>
@@ -569,10 +570,10 @@ const close = () => setModal(null)
                 </Button>
               </div>
             </div>
-          </Panel>
+          </Panel> : <Panel title="Priority Skill Gap"><p className="profile-section-body">No skill gaps found for the current relevant vacancies.</p></Panel>}
         </div>
 
-        <Panel title="Recommended Training" description="Address your skill gaps">
+        {topTraining ? <Panel title="Recommended Training" description="Address your skill gaps">
           <div style={{ padding: '0 22px 22px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '16px', marginBottom: '16px' }}>
               <div>
@@ -599,7 +600,7 @@ const close = () => setModal(null)
               </Button>
             </div>
           </div>
-        </Panel>
+        </Panel> : <Panel title="Recommended Training"><p className="profile-section-body">No training batches available.</p></Panel>}
 
         <Panel title="Entrepreneurship Opportunity" description="Business recommendation based on your profile">
           <div style={{ padding: '0 22px 22px' }}>
@@ -792,7 +793,7 @@ const close = () => setModal(null)
             <>
               <Metrics items={[
                 ['Total Applications', state.applications.length],
-                ['Active', state.applications.filter(a => a.status === 'Submitted').length],
+                ['Active', state.applications.filter(a => !['Hired', 'Rejected', 'Withdrawn'].includes(a.status)).length],
                 ['Under Review', state.applications.filter(a => a.status === 'Under Review').length],
                 ['Withdrawn', state.applications.filter(a => a.status === 'Withdrawn').length]
               ]} />
@@ -1915,6 +1916,8 @@ const close = () => setModal(null)
         </Modal>
       )}
 
+      {['profile', 'employment', 'training'].includes(path) && <Panel title="Career Reassessment" action={<Button onClick={() => { reassessCareer(); showMessage('Career recommendations updated using your latest profile.') }}>Reassess Career Profile</Button>}><div className="profile-section-body"><p>Recommendations use your current profile and the latest requirements. {reassessment.reason}.</p><div className="lgu-row-actions">{reassessment.changes.slice(0, 3).map(change => <span key={change.id}><strong>{change.title}</strong>: {change.before}% before ? {change.after}% now</span>)}</div><small>Before uses your profile before its most recent edit or training completion, compared with the same current vacancy.</small></div></Panel>}
+
       {modal?.kind === 'confirm-apply' && <RecordEditor title={`Apply — ${modal.job.title} · ${modal.job.company} · ${demoResident.name}`} record={{ note: '' }} fields={[{ key: 'note', label: 'Optional Application Note', type: 'textarea', required: false, wide: true }]} onClose={close} onSave={confirmApply} saveLabel="Submit Application" />}
 
       {modal?.kind === 'confirm-withdraw' && (
@@ -2077,18 +2080,18 @@ const close = () => setModal(null)
           description={`Submit your business registration for "${modal.record.businessName}" to the LGU for review? You cannot edit the application after submission.`}
           confirmLabel="Submit Application"
           onConfirm={() => {
-            const today = today()
+            const actionDate = today()
             const submitted = {
               ...modal.record,
-              submitted: today,
+              submitted: actionDate,
               status: 'New Application',
               history: [
                 `Draft saved`,
-                `Application submitted · ${today}`
+                `Application submitted · ${actionDate}`
               ],
               timeline: [
-                { stage: 'Draft', date: today, status: 'Completed' },
-                { stage: 'Application Submitted', date: today, status: 'Completed' },
+                { stage: 'Draft', date: actionDate, status: 'Completed' },
+                { stage: 'Application Submitted', date: actionDate, status: 'Completed' },
                 { stage: 'Under LGU Review', date: null, status: 'Pending' },
                 { stage: 'Approved / Rejected', date: null, status: 'Pending' }
               ]
@@ -2125,18 +2128,18 @@ const close = () => setModal(null)
               Cancel
             </Button>
             <Button onClick={() => {
-              const today = today()
+              const actionDate = today()
               const updated = {
                 ...modal.record,
                 status: 'Under Review',
                 documents: [...modal.record.documents, 'Barangay Clearance.pdf', 'DTI Certificate.pdf', 'Location Sketch v2.pdf'],
                 history: [
                   ...modal.record.history,
-                  `Additional requirements submitted · ${today}`
+                  `Additional requirements submitted · ${actionDate}`
                 ],
                 timeline: modal.record.timeline.map(t => 
                   t.stage === 'Under LGU Review' 
-                    ? { ...t, status: 'In Training' }
+                    ? { ...t, status: 'Under Review' }
                     : t
                 )
               }
@@ -2160,13 +2163,13 @@ const close = () => setModal(null)
           description={`Are you sure you want to withdraw your business registration application for "${modal.record.businessName}"? This action cannot be undone.`}
           confirmLabel="Withdraw Application"
           onConfirm={() => {
-            const today = today()
+            const actionDate = today()
             const withdrawn = {
               ...modal.record,
               status: 'Withdrawn',
               history: [
                 ...modal.record.history,
-                `Application withdrawn by applicant · ${today}`
+                `Application withdrawn by applicant · ${actionDate}`
               ]
             }
             

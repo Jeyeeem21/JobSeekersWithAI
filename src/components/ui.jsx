@@ -1,4 +1,4 @@
-﻿import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { X, Search, Inbox, CheckCircle2, AlertCircle, Info } from 'lucide-react'
 
 // Buttons
@@ -146,7 +146,8 @@ export function DataTable({ columns, rows, caption, pageSize = 5, totalRows }) {
   
   // Pagination logic
   const totalPages = Math.ceil(sortedRows.length / pageSize)
-  const startIndex = (currentPage - 1) * pageSize
+  const visiblePage = Math.max(1, Math.min(currentPage, totalPages))
+  const startIndex = (visiblePage - 1) * pageSize
   const endIndex = startIndex + pageSize
   const paginatedRows = sortedRows.slice(startIndex, endIndex)
   
@@ -227,31 +228,31 @@ export function DataTable({ columns, rows, caption, pageSize = 5, totalRows }) {
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
             <button
               onClick={() => goToPage(1)}
-              disabled={currentPage === 1}
+              disabled={visiblePage === 1}
               style={{
                 padding: '6px 10px',
                 fontSize: '12px',
                 border: '1px solid #e5e7eb',
                 borderRadius: '6px',
                 background: 'white',
-                cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                opacity: currentPage === 1 ? 0.5 : 1
+                cursor: visiblePage === 1 ? 'not-allowed' : 'pointer',
+                opacity: visiblePage === 1 ? 0.5 : 1
               }}
             >
               First
             </button>
             
             <button
-              onClick={() => goToPage(currentPage - 1)}
-              disabled={currentPage === 1}
+              onClick={() => goToPage(visiblePage - 1)}
+              disabled={visiblePage === 1}
               style={{
                 padding: '6px 10px',
                 fontSize: '12px',
                 border: '1px solid #e5e7eb',
                 borderRadius: '6px',
                 background: 'white',
-                cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                opacity: currentPage === 1 ? 0.5 : 1
+                cursor: visiblePage === 1 ? 'not-allowed' : 'pointer',
+                opacity: visiblePage === 1 ? 0.5 : 1
               }}
             >
               Previous
@@ -263,20 +264,20 @@ export function DataTable({ columns, rows, caption, pageSize = 5, totalRows }) {
               color: '#374151',
               fontWeight: 500
             }}>
-              Page {currentPage} of {totalPages}
+              Page {visiblePage} of {totalPages}
             </span>
             
             <button
-              onClick={() => goToPage(currentPage + 1)}
-              disabled={currentPage === totalPages}
+              onClick={() => goToPage(visiblePage + 1)}
+              disabled={visiblePage === totalPages}
               style={{
                 padding: '6px 10px',
                 fontSize: '12px',
                 border: '1px solid #e5e7eb',
                 borderRadius: '6px',
                 background: 'white',
-                cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                opacity: currentPage === totalPages ? 0.5 : 1
+                cursor: visiblePage === totalPages ? 'not-allowed' : 'pointer',
+                opacity: visiblePage === totalPages ? 0.5 : 1
               }}
             >
               Next
@@ -284,15 +285,15 @@ export function DataTable({ columns, rows, caption, pageSize = 5, totalRows }) {
             
             <button
               onClick={() => goToPage(totalPages)}
-              disabled={currentPage === totalPages}
+              disabled={visiblePage === totalPages}
               style={{
                 padding: '6px 10px',
                 fontSize: '12px',
                 border: '1px solid #e5e7eb',
                 borderRadius: '6px',
                 background: 'white',
-                cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                opacity: currentPage === totalPages ? 0.5 : 1
+                cursor: visiblePage === totalPages ? 'not-allowed' : 'pointer',
+                opacity: visiblePage === totalPages ? 0.5 : 1
               }}
             >
               Last

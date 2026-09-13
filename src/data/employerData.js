@@ -1,6 +1,5 @@
 // Employer data for Phase 3 - Mindoro Digital Services
 // Reuses LGU data structure for consistency across roles
-import { vacancies, transactions, residents } from './lguData'
 
 // Current employer profile (logged in as Mindoro Digital Services)
 export const currentEmployer = {

@@ -1,19 +1,21 @@
+import { matchJob } from '../services/matchingEngine.js'
+import { skillGapsFor, trainingRecommendations, entrepreneurshipRecommendations as businessRecommendations, workforceSkills, prescriptiveInsights } from '../services/recommendationEngines.js'
+import { skillName, available } from '../services/intelligenceConfig.js'
 import { useDemoStore, getDemoState, updateDemo, uid, today } from './demoStore'
 import * as lgu from './lguData'
-import * as resident from './residentData'
 import * as employer from './employerData'
 import * as training from './trainingData'
 import { money } from './lguFormat'
 
 const nameOf = (s, id, fallback = '') => s.profiles[id]?.name || lgu.residents.find(r => r.id === id)?.name || employer.candidateMatches.find(r => r.residentId === id)?.name || fallback
 const orgName = (s, id) => s.orgs.find(o => o.id === id)?.name || 'Organization'
-const skillNames = ids => (ids || []).map(id => lgu.skills.find(s => s.id === id)?.name || id)
+const skillNames = ids => (ids || []).map(id => skillName(id))
 const profileSkills = p => p.skills.map(s => `${s.name} (${s.level})`)
 export function applicationsFor(s) {
   return s.applications.map(a => {
     const job = s.jobs.find(j => j.id === a.jobId)
     const interview = s.interviews.find(i => i.applicationId === a.id && i.status === 'Scheduled') || s.interviews.filter(i => i.applicationId === a.id).at(-1)
-    return { ...a, vacancyId: a.jobId, applicantName: nameOf(s, a.residentId, a.applicantName), position: job?.title, jobTitle: job?.title, company: orgName(s, job?.employerId), employer: orgName(s, job?.employerId), interview }
+    return { ...a, ...(job && s.profiles[a.residentId] ? { matchScore: matchJob(s.profiles[a.residentId], job, today()).matchScore } : {}), vacancyId: a.jobId, applicantName: nameOf(s, a.residentId, a.applicantName), position: job?.title, jobTitle: job?.title, company: orgName(s, job?.employerId), employer: orgName(s, job?.employerId), interview }
   })
 }
 export function programsFor(s) {
@@ -58,16 +60,17 @@ export function lguModel(s) {
     const trend = period.trend.map((row, i) => i === period.trend.length - 1 ? [row[0], row[1] + addedHires] : row)
     return [key, { ...period, hired: period.hired + addedHires, applications: period.applications + snapshot.applications - lgu.snapshot.applications, shortlisted: period.shortlisted + snapshot.shortlisted - lgu.snapshot.shortlisted, interviews: period.interviews + snapshot.interviews - lgu.snapshot.interviews, trend }]
   }))
-  const skills = lgu.skills.map(skill => ({ ...skill, slots: programs.filter(p => ['Upcoming', 'Active', 'Full'].includes(p.status) && p.skillIds.includes(skill.id)).reduce((n, p) => n + p.slots, 0) }))
+  const skills = workforceSkills(s, programs, lgu.skills, today())
+  const insights = prescriptiveInsights(skills, programs)
   const rows = lgu.residents.map(r => {
     const p = s.profiles[r.id]
     const ownApps = applications.filter(a => a.residentId === r.id)
     const trainingRows = registrationsFor(s).filter(a => a.residentId === r.id)
-    return { ...r, ...(p ? { name: p.name, location: p.location, interest: p.careerInterests.join(', '), employment: p.employmentStatus, skills: profileSkills(p), education: (p.educationEntries || []).map(e => `${e.course} · ${e.school}`).join('; '), experience: p.experience.map(e => `${e.position} · ${e.organization}`).join('; '), certifications: p.certifications.map(c => c.name).join(', '), completion: p.profileCompletion, gaps: skills.filter(skill => !p.skills.some(ps => ps.name === skill.name && ps.level !== 'Beginner')).filter(skill => ['network', 'directory', 'security'].includes(skill.id)).map(skill => skill.id) } : {}), status: s.users.find(u => u.id === r.id)?.status || r.status, applications: ownApps.length ? ownApps.map(a => `${a.jobTitle}: ${a.status}`).join('; ') : r.applications, training: trainingRows.length ? trainingRows.map(t => `${t.title}: ${t.status}`).join('; ') : r.training }
+    return { ...r, ...(p ? { name: p.name, location: p.location, interest: p.careerInterests.join(', '), employment: p.employmentStatus, skills: profileSkills(p), education: (p.educationEntries || []).map(e => `${e.course} · ${e.school}`).join('; '), experience: p.experience.map(e => `${e.position} · ${e.organization}`).join('; '), certifications: p.certifications.map(c => c.name).join(', '), completion: p.profileCompletion, gaps: skillGapsFor(p, jobs, programs, today()).map(g => g.skillId) } : {}), status: s.users.find(u => u.id === r.id)?.status || r.status, applications: ownApps.length ? ownApps.map(a => `${a.jobTitle}: ${a.status}`).join('; ') : r.applications, training: trainingRows.length ? trainingRows.map(t => `${t.title}: ${t.status}`).join('; ') : r.training }
   })
   const orgs = s.orgs.map(o => ({ ...o, vacancies: jobs.filter(j => j.employerId === o.id && j.status === 'Active').length, hires: (o.hires || 0) + placements.filter(p => p.createdInDemo && jobs.find(j => j.id === p.jobId)?.employerId === o.id).length, participants: programs.filter(p => p.agencyId === o.id).reduce((n, p) => n + p.registrations, 0), completed: programs.filter(p => p.agencyId === o.id).reduce((n, p) => n + p.completed, 0), slots: programs.filter(p => p.agencyId === o.id).reduce((n, p) => n + p.slots, 0) }))
   const businesses = s.businesses.filter(b => b.status !== 'Draft').map(b => ({ ...b, applicant: nameOf(s, b.residentId, b.applicant) }))
-  return { state: { orgs, businesses, users: s.users.map(u => ({ ...u, name: nameOf(s, u.id, s.orgs.find(o => o.id === u.id)?.name || u.name) })), settings: s.settings.lgu }, residents: rows, programs, applications, vacancies: jobs.filter(j => j.status !== 'Draft').map(j => ({ ...j, salary: `${money(j.salary.min)}–${money(j.salary.max)} / month` })), placements, snapshot, periods, skills, transactions: s.transactions.map(t => ({ ...t, organization: t.organizationId ? orgName(s, t.organizationId) : t.organization, item: t.itemId ? (t.kind === 'job' ? jobs.find(j => j.id === t.itemId)?.title : programs.find(p => p.id === t.itemId)?.name) || t.item : t.item })), sponsors: s.sponsors }
+  return { state: { orgs, businesses, users: s.users.map(u => ({ ...u, name: nameOf(s, u.id, s.orgs.find(o => o.id === u.id)?.name || u.name) })), settings: s.settings.lgu }, residents: rows, programs, applications, vacancies: jobs.filter(j => j.status !== 'Draft').map(j => ({ ...j, salary: `${money(j.salary.min)}–${money(j.salary.max)} / month` })), placements, snapshot, periods, skills, insights, transactions: s.transactions.map(t => ({ ...t, organization: t.organizationId ? orgName(s, t.organizationId) : t.organization, item: t.itemId ? (t.kind === 'job' ? jobs.find(j => j.id === t.itemId)?.title : programs.find(p => p.id === t.itemId)?.name) || t.item : t.item })), sponsors: s.sponsors }
 }
 export function useLguData() { return lguModel(useDemoStore()) }
 export function setLGUState(updater) {
@@ -91,17 +94,16 @@ export function setLGUState(updater) {
 export function residentModel(s) {
   const profile = s.profiles['R-001']
   const jobs = jobsFor(s)
-  const recommendedJobs = jobs.filter(j => j.status === 'Active').map(j => {
-    const seed = resident.recommendedJobs.find(r => r.id === j.id) || {}
-    const currentSkills = profile.skills.map(s => s.name)
-    return { ...seed, ...j, salary: `${money(j.salary.min)}–${money(j.salary.max)}`, matchScore: seed.matchScore || 82, matchedRequirements: profileSkills(profile), missingRequirements: j.requiredSkills.filter(skill => !currentSkills.includes(skill)), suggestedAction: 'Review the current requirements and apply if this opportunity fits your interests.', requiredEducation: j.requiredEducation || 'Relevant education or experience', certifications: j.certifications || [] }
-  })
+  const recommendedJobs = jobs.filter(j => available(j, today())).map(j => ({ ...j, ...matchJob(profile, j, today()), salary: `${money(j.salary.min)}?${money(j.salary.max)}`, requiredEducation: (j.acceptedEducation || []).join(' or ') || 'No strict education requirement', certifications: [...(j.requiredCertifications || []), ...(j.preferredCertifications || [])] })).sort((a, b) => b.matchScore - a.matchScore || a.id.localeCompare(b.id))
   const programs = programsFor(s)
   const business = s.businesses.filter(b => b.residentId === 'R-001').at(-1)
   const app = business ? { ...business, applicant: profile.name, businessName: business.name, businessType: business.type, address: business.address || business.location, contactNumber: business.contactNumber || profile.phone, timeline: business.history.map((h, i) => ({ stage: h, date: null, status: i === business.history.length - 1 ? business.status : 'Completed' })) } : null
-  const data = lguModel(s)
-  const skillGaps = resident.skillGaps.map(g => { const skill = data.skills.find(s => s.id === g.skillId); return { ...g, currentLevel: profile.skills.find(s => s.name === g.skill)?.level || 'None', trainingSlots: skill.slots, residentsMissing: skill.missing, relatedJobs: jobs.filter(j => j.skillIds?.includes(g.skillId)).map(j => j.title) } })
-  return { state: { profile, applications: applicationsFor(s).filter(a => a.residentId === 'R-001'), myTraining: registrationsFor(s).filter(r => r.residentId === 'R-001'), businessApplication: app, settings: s.settings.resident }, demoResident: profile, recommendedJobs, recommendedTraining: programs.filter(p => ['Active', 'Upcoming', 'Full'].includes(p.status)), skillGaps, progressTimeline: [...resident.progressTimeline, ...s.notifications.resident.filter(n => n.id.startsWith('N-')).map(n => ({ ...n, description: n.message }))] }
+  const skillGaps = skillGapsFor(profile, jobs, programs, today())
+  const recommendedTraining = trainingRecommendations(profile, programs, jobs, skillGaps, s.registrations, today())
+  const entrepreneurshipRecommendations = businessRecommendations(profile, programs)
+  const reassessment = { ...s.reassessment, changes: recommendedJobs.map(j => ({ id: j.id, title: j.title, before: matchJob(s.reassessment?.previousProfile || profile, j, today()).matchScore, after: j.matchScore })) }
+  return { state: { profile, applications: applicationsFor(s).filter(a => a.residentId === 'R-001'), myTraining: registrationsFor(s).filter(r => r.residentId === 'R-001'), businessApplication: app, settings: s.settings.resident }, demoResident: profile, recommendedJobs, recommendedTraining, entrepreneurshipRecommendations, skillGaps, reassessment, progressTimeline: s.notifications.resident.map(n => ({ ...n, description: n.message })) }
+
 }
 export function useResidentModel() { return residentModel(useDemoStore()) }
 export function setResidentState(updater) {
@@ -122,7 +124,11 @@ export function employerModel(s) {
   const interviews = s.interviews.filter(i => jobs.some(j => j.id === i.jobId)).map(i => ({ ...i, applicantName: nameOf(s, i.residentId, i.applicantName), position: jobs.find(j => j.id === i.jobId)?.title }))
   const ownPlacements = lguModel(s).placements.filter(p => p.employer === orgName(s, s.activeEmployerId))
   const statistics = { totalVacancies: jobs.length, activeVacancies: jobs.filter(j => j.status === 'Active').length, totalHires: ownPlacements.length, currentMonth: { applications: applications.length, shortlisted: applications.filter(a => a.shortlistedDate || ['Shortlisted', 'Interview Scheduled', 'Interviewed', 'Hired'].includes(a.status)).length, interviewed: interviews.length, hired: ownPlacements.length } }
-  const candidateMatches = employer.candidateMatches.filter(m => jobs.some(j => j.id === m.vacancyId)).map(m => { const p = s.profiles[m.residentId]; return { ...m, ...(p ? { name: p.name, location: p.location, education: p.educationEntries.map(e => e.course).join(', '), experience: p.experience.map(e => `${e.position} · ${e.organization}`).join('; '), skills: profileSkills(p), certifications: p.certifications.map(c => c.name), whyMatched: profileSkills(p), aiRecommendation: 'Compare the current resident profile with the vacancy requirements.', whatsMissing: jobs.find(j => j.id === m.vacancyId).requiredSkills.filter(skill => !p.skills.some(s => s.name === skill)), missingSkills: jobs.find(j => j.id === m.vacancyId).requiredSkills.filter(skill => !p.skills.some(s => s.name === skill)) } : {}), status: applications.find(a => a.jobId === m.vacancyId && a.residentId === m.residentId)?.status || 'Matched' } })
+  const candidateMatches = jobs.filter(j => j.status === 'Active').flatMap(job => Object.values(s.profiles).map(p => {
+    const result = matchJob(p, job, today())
+    const registration = registrationsFor(s).find(r => r.residentId === p.id && r.status === 'In Training')
+    return { ...result, id: `${p.id}/${job.id}`, residentId: p.id, vacancyId: job.id, name: p.name, location: p.location, education: (p.educationEntries || []).map(e => e.course).join(', '), experience: `${result.experienceMonths} relevant months`, skills: profileSkills(p), certifications: (p.certifications || []).map(c => c.name), whyMatched: result.matchedRequirements, aiRecommendation: result.explanation, whatsMissing: result.missingRequirements, missingSkills: result.skills.filter(s => s.status !== 'Matched').map(s => s.name), inTraining: !!registration, trainingProgress: registration?.progress || 0, status: applications.find(a => a.jobId === job.id && a.residentId === p.id)?.status || 'Matched' }
+  })).sort((a, b) => b.matchScore - a.matchScore || a.id.localeCompare(b.id))
   return { state: { vacancies: jobs, settings: s.settings.employer }, currentEmployer: { ...orgProfile(s, s.activeEmployerId, employer.currentEmployer), statistics }, employerVacancies: jobs, applications, interviews, candidateMatches, hires: ownPlacements.map(p => ({ ...p, hiree: p.resident, position: p.job, startDate: p.hired, acceptedDate: p.hired, salary: 22000, employmentType: 'Full-time' })), organizations: s.orgs.filter(o => o.type === 'Employer'), transactions: lguModel(s).transactions.filter(t => t.kind === 'job' && (t.organizationId === s.activeEmployerId || t.organization === orgName(s, s.activeEmployerId))) }
 }
 export function useEmployerModel() { return employerModel(useDemoStore()) }

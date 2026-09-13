@@ -1,7 +1,7 @@
 import { useDemoStore, setNotifications } from '../data/demoStore'
-﻿import { 
+import { 
   LayoutDashboard, User, FileText, Briefcase, GraduationCap, Sprout, 
-  FileCheck, BookOpen, Building2, TrendingUp, Bell, ChevronRight, 
+  FileCheck, Building2, TrendingUp, Bell, ChevronRight, 
   Menu, X, Users, Building, Calendar, BarChart3, Settings, DollarSign,
   Target, MapPin, ShieldCheck, LogOut, CheckCircle2
 } from 'lucide-react'

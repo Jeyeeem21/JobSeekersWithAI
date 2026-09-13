@@ -1,5 +1,5 @@
 import { Alert, Button, Panel } from '../../components/ui'
-import { insights, placementRate } from '../../data/lguData'
+import { placementRate } from '../../data/lguData'
 import { useLguData } from '../../data/demoModels'
 import { Bars, Facts, Flow, Metrics, Status, Trend } from './Workspace'
 
@@ -22,7 +22,6 @@ export function TrainingAnalytics() {
 }
 export function EntrepreneurshipAnalytics({ businesses }) {
   const { snapshot } = useLguData()
-  const approvedDelta = businesses.filter(b => b.status === 'Approved').length - 1
   const underReview = businesses.filter(b => b.status === 'Under Review').length
   return (
     <>
@@ -61,10 +60,10 @@ export function HiringOutcomes() {
   return <><Metrics items={[[ 'Employment Placements', snapshot.hired, 'Year to date'], ['Average Match Score of Hired Residents', '91%', 'Illustrative tracked cohort average']]} /><div className="lgu-grid"><Bars title="Hires by Industry" items={[[ 'Information Technology', 86], ['Business Services', 68], ['Retail', 35], ['Other Industries', 25]]} /><Bars title="Hires by Job Category" items={[[ 'IT Support', 74], ['Administration', 68], ['Sales & Service', 47], ['Marketing', 25]]} /><Bars title="Hires by Employer" items={[[ 'San Jose Business Center', 68], ['Mindoro Digital Services', 49], ['Other Verified Employers', 97]]} /><Bars title="Hires by Career Interest" items={[[ 'IT Support', 80], ['Administration', 70], ['Digital Services', 30], ['Other Interests', 34]]} /></div></>
 }
 export function InsightCards({ onSupport, compact = false }) {
-  const { skills } = useLguData()
+  const { skills, insights } = useLguData()
   return <>{!compact && <><Alert>Decision support only. Suggested actions are for LGU review; the system does not automatically execute policy decisions.</Alert><Flow steps={['Employer Demand', 'Resident Skill Gaps', 'Training Need', 'Training Supply', 'Resident Development', 'Employment Outcomes', 'Suggested LGU Action'].map(s => [s])} /></>}<div className={compact ? '' : 'lgu-grid'}>{(compact ? insights.slice(0, 1) : insights).map(insight => {
     const skill = skills.find(s => s.id === insight.skillId)
-    return <Panel key={insight.id} title={insight.title} action={<Status value={insight.priority} />}><div className="lgu-insight-body"><div className="eyebrow">PRESCRIPTIVE INSIGHT</div>{insight.id === 'I-4' ? <Facts items={[[ 'Completed Training', 100], ['Related Placements', 15]]} /> : <div className="lgu-evidence"><span><b>{skill.demand}</b> related vacancies</span><span><b>{skill.missing}</b> residents missing skill</span><span><b>{skill.slots}</b> training slots</span></div>}<p>{insight.explanation}</p><div className="lgu-suggestion"><h3>Suggested Action</h3><p>{insight.action}</p></div><small>Related skill: {skill.name} · September 12, 2026 snapshot</small><div className="lgu-row-actions"><Button variant="secondary" onClick={() => onSupport(insight, 'View Supporting Data')}>View Supporting Data</Button>{!compact && insight.actions.map(action => <Button variant="ghost" key={action} onClick={() => onSupport(insight, action)}>{action}</Button>)}</div></div></Panel>
+    return <Panel key={insight.id} title={insight.title} action={<Status value={insight.priority} />}><div className="lgu-insight-body"><div className="eyebrow">PRESCRIPTIVE INSIGHT</div><div className="lgu-evidence"><span><b>{skill.demand}</b> related vacancies</span><span><b>{skill.missing}</b> residents missing skill</span><span><b>{skill.slots}</b> training slots</span></div><p>{insight.explanation}</p><div className="lgu-suggestion"><h3>Suggested Action</h3><p>{insight.action}</p></div><small>Related skill: {skill.name} · September 12, 2026 snapshot</small><div className="lgu-row-actions"><Button variant="secondary" onClick={() => onSupport(insight, 'View Supporting Data')}>View Supporting Data</Button>{!compact && insight.actions.map(action => <Button variant="ghost" key={action} onClick={() => onSupport(insight, action)}>{action}</Button>)}</div></div></Panel>
   })}</div></>
 }
 export function OverviewMetrics({ period, orgs }) {

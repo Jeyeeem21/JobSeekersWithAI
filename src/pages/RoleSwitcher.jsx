@@ -1,4 +1,4 @@
-import { User, Building, GraduationCap, MapPin, ShieldCheck, ArrowRight, Sparkles } from 'lucide-react'
+import { User, Building, GraduationCap, MapPin, ArrowRight, Sparkles } from 'lucide-react'
 import { Brand } from '../components/Layout'
 
 const roles = [

@@ -26,11 +26,13 @@ export function RecordEditor({ title, record, fields, onSave, onClose, saveLabel
     Object.assign(issues, validate?.(draft) || {})
     setErrors(issues)
     if (Object.keys(issues).length) return
-    try { onSave(draft) } catch (error) { setErrors({ form: error.message }) }
+    const normalized = structuredClone(draft)
+    fields.filter(f => f.type === 'list').forEach(f => { const parts = f.key.split('.'); const last = parts.pop(); const target = parts.reduce((obj, key) => obj[key], normalized); target[last] = (Array.isArray(target[last]) ? target[last] : String(target[last] || '').split(',')).map(v => String(v).trim()).filter(Boolean) })
+    try { onSave(normalized) } catch (error) { setErrors({ form: error.message }) }
   }
   return <Modal title={title} size="md" onClose={onClose}><form className="compact-form" onSubmit={submit} noValidate><div className="compact-form-grid">{fields.map(f => {
     const value = get(f.key)
-    const props = { value: f.type === 'list' ? (value || []).join(', ') : value ?? '', onChange: e => change(f.key, f.type === 'number' ? e.target.value === '' ? '' : Number(e.target.value) : f.type === 'list' ? e.target.value.split(',').map(s => s.trim()).filter(Boolean) : e.target.value), 'aria-invalid': !!errors[f.key] }
+    const props = { 'aria-label': f.label, value: f.type === 'list' ? (Array.isArray(value) ? value.join(', ') : value || '') : value ?? '', onChange: e => change(f.key, f.type === 'number' ? e.target.value === '' ? '' : Number(e.target.value) : e.target.value), 'aria-invalid': !!errors[f.key] }
     return <div key={f.key} className={f.wide ? 'compact-form-wide' : ''}><Field label={f.label} error={errors[f.key]} hint={f.hint}>{f.options ? <select {...props}>{f.options.map(o => <option key={o}>{o}</option>)}</select> : f.type === 'textarea' ? <textarea {...props} rows={3} /> : <input {...props} type={f.type === 'list' ? 'text' : f.type || 'text'} min={f.min} step={f.integer ? 1 : undefined} />}</Field></div>
   })}</div>{errors.form && <p className="field-error" role="alert">{errors.form}</p>}<div className="modal-actions"><Button type="button" variant="secondary" onClick={onClose}>Cancel</Button><Button type="submit">{saveLabel}</Button></div></form></Modal>
 }

@@ -8,6 +8,7 @@ export const jobFields = [
   { key: 'salary.min', label: 'Minimum Salary (PHP)', type: 'number', min: 0 }, { key: 'salary.max', label: 'Maximum Salary (PHP)', type: 'number', min: 0 },
   { key: 'location', label: 'Location' }, { key: 'requiredSkills', label: 'Required Skills', type: 'list', hint: 'Separate skills with commas.' },
 ]
+jobFields.push({ key: 'preferredSkills', label: 'Preferred Skills', type: 'list', required: false }, { key: 'requiredSkillLevel', label: 'Required Proficiency', options: ['Beginner', 'Intermediate', 'Advanced'] }, { key: 'acceptedEducation', label: 'Accepted Education', type: 'list', required: false }, { key: 'minimumExperienceMonths', label: 'Relevant Experience (Months)', type: 'number', min: 0, integer: true, required: false }, { key: 'requiredCertifications', label: 'Required Certifications', type: 'list', required: false }, { key: 'preferredCertifications', label: 'Preferred Certifications', type: 'list', required: false })
 export const programFields = [
   { key: 'name', label: 'Program Name' }, { key: 'duration', label: 'Duration' },
   { key: 'description', label: 'Description', type: 'textarea', wide: true },
@@ -16,6 +17,7 @@ export const programFields = [
   { key: 'location', label: 'Location' }, { key: 'skillIds', label: 'Skills Developed', type: 'list', hint: 'Use skill names, separated by commas.' },
   { key: 'instructor', label: 'Instructor', required: false }, { key: 'targetAudience', label: 'Target Audience', required: false },
 ]
+programFields.push({ key: 'developedLevel', label: 'Completion Proficiency', options: ['Intermediate', 'Advanced'] }, { key: 'prerequisiteSkills', label: 'Prerequisite Skills', type: 'list', required: false })
 export const organizationFields = [
   { key: 'name', label: 'Organization Name' }, { key: 'contact', label: 'Contact Person' },
   { key: 'description', label: 'Description', type: 'textarea', wide: true },

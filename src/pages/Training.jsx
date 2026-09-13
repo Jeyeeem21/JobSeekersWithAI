@@ -1,7 +1,7 @@
 import { useTrainingModel, setTrainingState } from '../data/demoModels'
-import { setActor, saveOwnedRecord, recordLifecycle, saveOrganization, updateApplication, saveInterview, interviewAction, inviteCandidate, updateRegistration, today } from '../data/demoStore'
+import { setActor, saveOwnedRecord, recordLifecycle, saveOrganization, updateRegistration } from '../data/demoStore'
 import { RecordEditor } from '../components/RecordEditor'
-import { jobFields, programFields, organizationFields, interviewFields } from '../data/formSchemas'
+import { programFields, organizationFields } from '../data/formSchemas'
 import { useState } from 'react'
 import { FileText, ShieldCheck, AlertCircle } from 'lucide-react'
 import { Alert, Button, ConfirmationDialog, Field, Modal, PageTitle, Panel, Tabs } from '../components/ui'
@@ -27,16 +27,18 @@ const filter = (key, label, options, test) => ({ key, label, options, test })
 const formatDate = (dateStr) => new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 
 export function TrainingDashboard({ page, navigate, showMessage }) {
-  const { state, currentAgency, agencyPrograms, participants, organizations, skillGapAlignment, trainingTransactions, trainingSponsors } = useTrainingModel()
+  const { state, currentAgency, agencyPrograms, organizations, skillGapAlignment, trainingTransactions, trainingSponsors } = useTrainingModel()
   const setState = setTrainingState
   const [modal, setModal] = useState(null)
-  const [notes, setNotes] = useState('')
+  const [, setNotes] = useState('')
   const [path, query] = page.split('?')
   const module = modules[path] || modules.dashboard
   const requestedTab = new URLSearchParams(query).get('tab')
   const tab = module.tabs?.includes(requestedTab) ? requestedTab : module.tabs?.[0]
   
 const close = () => { setModal(null); setNotes('') }
+  const attempt = action => { try { action(); close() } catch (error) { setModal(m => ({ ...m, error: error.message })); showMessage(error.message) } }
+  const lifecycle = (record, action) => setModal({ kind: 'lifecycle', title: `${action}: ${record.title || record.name}`, record, action, size: 'sm' })
   const details = (title, items, extra, size = 'md') => setModal({ title, items, extra, size })
 
   const isVerified = currentAgency.verificationStatus === 'Verified'
@@ -132,7 +134,7 @@ const close = () => { setModal(null); setNotes('') }
           <Panel
             title="Agency Information"
             description="Your training center profile"
-            action={<Button variant="ghost" onClick={() => navigate('profile')}>View Full Profile</Button>}
+            action={<Button variant="ghost" onClick={viewAgencyProfile}>View Full Profile</Button>}
           >
             <Facts items={[
               ['Agency Name', currentAgency.name],
@@ -1950,8 +1952,8 @@ const close = () => { setModal(null); setNotes('') }
       )}
 
       {/* Create/Edit Training Program Modal */}
-      {(modal?.kind === 'create-program' || modal?.kind === 'edit-program') && <RecordEditor key={modal.record.id} title={modal.title} record={{ ...modal.record, schedule: modal.record.schedule?.slice(0, 10) || '' }} fields={programFields} onClose={close} saveLabel={modal.kind === 'create-program' ? 'Save Draft' : 'Save Changes'} onSave={draft => { saveOwnedRecord('program', draft); close(); showMessage('Training program saved.') }} />}
-      {modal?.kind === 'participant-status' && <ConfirmationDialog title={modal.title} description={modal.error || (modal.status === 'Completed' ? 'Record training completion? This does not guarantee employment.' : 'Start training for this participant?')} confirmLabel={modal.status === 'Completed' ? 'Mark Completed' : 'Mark In Training'} variant="primary" onClose={close} onConfirm={() => attempt(() => { updateRegistration(modal.record.id, modal.status); showMessage('Participant status updated.') })} />}
+      {(modal?.kind === 'create-program' || modal?.kind === 'edit-program') && <RecordEditor key={modal.record.id} title={modal.title} record={{ developedLevel: 'Intermediate', ...modal.record, schedule: modal.record.schedule?.slice(0, 10) || '' }} fields={programFields} onClose={close} saveLabel={modal.kind === 'create-program' ? 'Save Draft' : 'Save Changes'} onSave={draft => { saveOwnedRecord('program', draft); close(); showMessage('Training program saved.') }} />}
+      {modal?.kind === 'participant-status' && <ConfirmationDialog title={modal.title} description={modal.error || (modal.status === 'Completed' ? 'Record completion and add the program skills to the resident profile at the listed completion proficiency for this demo? Matching will be reassessed; this does not guarantee employment.' : 'Start training for this participant?')} confirmLabel={modal.status === 'Completed' ? 'Mark Completed' : 'Mark In Training'} variant="primary" onClose={close} onConfirm={() => attempt(() => { updateRegistration(modal.record.id, modal.status); showMessage('Participant status updated.') })} />}
 
       {modal?.kind === 'edit-agency-profile' && <RecordEditor title="Edit Agency Profile" record={modal.record} fields={organizationFields} onClose={close} onSave={draft => { saveOrganization(currentAgency.id, draft); close(); showMessage('Agency profile updated.') }} />}
 

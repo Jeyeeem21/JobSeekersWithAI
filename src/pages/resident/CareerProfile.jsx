@@ -13,6 +13,7 @@ const schemas = {
   experience: [{ key: 'position', label: 'Position' }, { key: 'organization', label: 'Organization' }, { key: 'type', label: 'Experience Type', options: ['Employment', 'Internship', 'Volunteer', 'Self-employed'] }, { key: 'duration', label: 'Duration', required: false }, { key: 'startDate', label: 'Start Date', type: 'date' }, { key: 'endDate', label: 'End Date', type: 'date', required: false }, { key: 'responsibilities', label: 'Description', type: 'textarea', wide: true }],
   certifications: [{ key: 'name', label: 'Certification' }, { key: 'issuingOrganization', label: 'Provider' }, { key: 'dateIssued', label: 'Completion Date', type: 'date' }],
 }
+schemas.entrepreneurship = [{ key: 'businessIdea', label: 'Business Interest' }, { key: 'businessName', label: 'Proposed Business Name' }, { key: 'availableResources', label: 'Available Resources', type: 'textarea' }, { key: 'estimatedCapital', label: 'Available Capital (PHP)', type: 'number', min: 0 }, { key: 'assistanceNeeded', label: 'Assistance Needed', type: 'list', required: false }]
 const labels = { skills: 'Skill', educationEntries: 'Education', experience: 'Experience', certifications: 'Certification' }
 
 export function CareerProfile({ showMessage, tab }) {
@@ -22,7 +23,8 @@ export function CareerProfile({ showMessage, tab }) {
   const close = () => setModal(null)
   const save = draft => {
     const next = structuredClone(profile)
-    if (['personal', 'career'].includes(modal.section)) Object.assign(next, draft)
+    if (modal.section === 'entrepreneurship') next.entrepreneurship = { ...next.entrepreneurship, ...draft, interested: true }
+    else if (['personal', 'career'].includes(modal.section)) Object.assign(next, draft)
     else {
       const rows = next[modal.section] || []
       if (modal.section === 'skills' && rows.some(r => r.id !== draft.id && r.name.toLowerCase() === draft.name.trim().toLowerCase())) throw new Error('This skill already exists. Edit the existing skill.')
@@ -41,6 +43,7 @@ export function CareerProfile({ showMessage, tab }) {
       <>
         <Alert>Your current career profile is shared with relevant employer and LGU views.</Alert>
         
+        <Panel title="Entrepreneurship Resources" action={<Button variant="secondary" onClick={() => setModal({ section: 'entrepreneurship', title: 'Edit Business Resources', record: profile.entrepreneurship || {} })}>Edit Business Resources</Button>}><div className="profile-section-body"><Facts items={[[ 'Interest', profile.entrepreneurship?.businessIdea], ['Resources', profile.entrepreneurship?.availableResources], ['Available Capital (PHP)', profile.entrepreneurship?.estimatedCapital]]} /></div></Panel>
         <Panel title="Profile Completion">
           <div className="profile-section-body">
             <ProgressBar value={profile.profileCompletion} label="Overall Completion" />
@@ -75,7 +78,7 @@ export function CareerProfile({ showMessage, tab }) {
               showMessage('Entry removed.') 
             }} 
           />
-        ) : modal && (
+        ) : modal?.view ? <Modal title={modal.title} onClose={close}><Facts items={schemas[modal.section].map(f => [f.label, modal.record[f.key]])} /></Modal> : modal && (
           <RecordEditor 
             key={`${modal.section}/${modal.record.id || ''}/${modal.view}`} 
             title={modal.title} 
@@ -290,7 +293,7 @@ export function CareerProfile({ showMessage, tab }) {
             showMessage('Entry removed.') 
           }} 
         />
-      ) : modal && (
+      ) : modal?.view ? <Modal title={modal.title} onClose={close}><Facts items={schemas[modal.section].map(f => [f.label, modal.record[f.key]])} /></Modal> : modal && (
         <RecordEditor 
           key={`${modal.section}/${modal.record.id || ''}/${modal.view}`} 
           title={modal.title} 

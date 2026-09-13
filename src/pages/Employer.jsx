@@ -1,12 +1,12 @@
 import { useEmployerModel, setEmployerState } from '../data/demoModels'
-import { setActor, saveOwnedRecord, recordLifecycle, saveOrganization, updateApplication, saveInterview, interviewAction, inviteCandidate, updateRegistration, today } from '../data/demoStore'
+import { setActor, saveOwnedRecord, recordLifecycle, saveOrganization, updateApplication, saveInterview, interviewAction, inviteCandidate, today } from '../data/demoStore'
 import { RecordEditor } from '../components/RecordEditor'
-import { jobFields, programFields, organizationFields, interviewFields } from '../data/formSchemas'
+import { jobFields, organizationFields, interviewFields } from '../data/formSchemas'
 import { useState } from 'react'
 import { FileText, ShieldCheck } from 'lucide-react'
 import { Alert, Button, ConfirmationDialog, Field, Modal, PageTitle, Panel, Tabs } from '../components/ui'
 import { recruitmentAnalytics, skillGapAnalytics, sponsorshipOpportunities } from '../data/employerData'
-import { Bars, Facts, Flow, Metrics, RecordTable, Status, Trend } from './lgu/Workspace'
+import { Bars, Facts, Flow, Metrics, RecordTable, Status } from './lgu/Workspace'
 import { money } from '../data/lguFormat'
 import './lgu/lgu.css'
 
@@ -31,14 +31,16 @@ export function EmployerDashboard({ page, navigate, showMessage }) {
   const { state, currentEmployer, employerVacancies, applications, interviews, candidateMatches, hires, organizations, transactions } = useEmployerModel()
   const setState = setEmployerState
   const [modal, setModal] = useState(null)
-  const [notes, setNotes] = useState('')
-  const [reviewError, setReviewError] = useState('')
+  const [, setNotes] = useState('')
+  const [, setReviewError] = useState('')
   const [path, query] = page.split('?')
   const module = modules[path] || modules.dashboard
   const requestedTab = new URLSearchParams(query).get('tab')
   const tab = module.tabs?.includes(requestedTab) ? requestedTab : module.tabs?.[0]
   
 const close = () => { setModal(null); setNotes(''); setReviewError('') }
+  const attempt = action => { try { action(); close() } catch (error) { setModal(m => ({ ...m, error: error.message })); showMessage(error.message) } }
+  const lifecycle = (record, action) => setModal({ kind: 'lifecycle', title: `${action}: ${record.title || record.name}`, record, action, size: 'sm' })
   const details = (title, items, extra, size = 'md') => setModal({ title, items, extra, size })
 
   const stats = currentEmployer.statistics
@@ -148,13 +150,12 @@ const close = () => { setModal(null); setNotes(''); setReviewError('') }
   }
 
   const viewApplication = (app) => {
-    const match = candidateMatches.find(m => m.residentId === app.residentId)
     details(
       `${app.applicantName} - Application`,
       [
         ['Applicant Name', app.applicantName],
         ['Position', app.position],
-        ['Match Score', match ? `${match.matchScore}%` : 'N/A'],
+        ['Match Score', `${app.matchScore}%`],
         ['Applied Date', formatDate(app.appliedDate)],
         ['Status', app.status],
         ['Cover Letter', app.coverLetter],
@@ -540,12 +541,11 @@ const close = () => { setModal(null); setNotes(''); setReviewError('') }
             >
               <div className="lgu-queue">
                 {pendingApplications.slice(0, 3).map(app => {
-                  const match = candidateMatches.find(m => m.residentId === app.residentId)
                   return (
                     <div key={app.id}>
                       <div>
                         <strong>{app.applicantName}</strong>
-                        <small>{app.position} • {match ? `${match.matchScore}% match` : 'Match data unavailable'}</small>
+                        <small>{app.position} • {`${app.matchScore}% match`}</small>
                       </div>
                       <Button variant="secondary" onClick={() => viewApplication(app)}>
                         Review
@@ -683,7 +683,7 @@ const close = () => { setModal(null); setNotes(''); setReviewError('') }
           ]}
           filters={[
             filter('status', 'Status'),
-            filter('vacancyId', 'Position', [...new Set(filtered.map(m => m.vacancyId))].map(id => employerVacancies.find(v => v.id === id)?.title)),
+            filter('vacancyId', 'Position', [...new Set(filtered.map(m => m.vacancyId))].map(id => employerVacancies.find(v => v.id === id)?.title), (row, value) => employerVacancies.find(v => v.id === row.vacancyId)?.title === value),
             filter('matchScore', 'Match Score', ['90% and above', '80-89%', 'Below 80%'], (r, v) =>
               v === '90% and above' ? r.matchScore >= 90 : v === '80-89%' ? r.matchScore >= 80 && r.matchScore < 90 : r.matchScore < 80
             )
@@ -708,8 +708,7 @@ const close = () => { setModal(null); setNotes(''); setReviewError('') }
           col('applicantName', 'Name'),
           col('position', 'Position'),
           col('matchScore', 'Match', app => {
-            const match = candidateMatches.find(m => m.residentId === app.residentId)
-            return match ? `${match.matchScore}%` : 'N/A'
+            return `${app.matchScore}%`
           }),
           col('appliedDate', 'Submitted', app => formatDate(app.appliedDate)),
           statusCol('status', 'Status')
@@ -879,12 +878,7 @@ const close = () => { setModal(null); setNotes(''); setReviewError('') }
 
   // Transactions & Partnerships
   if (path === 'transactions') {
-    const employerTransactions = [
-      { id: 'JP-2026-001', item: 'IT Support Technician', amount: 500, date: '2026-09-01', status: 'Paid' },
-      { id: 'JP-2026-003', item: 'Digital Marketing Associate', amount: 500, date: '2026-08-20', status: 'Paid' },
-      { id: 'JP-2026-004', item: 'Network Engineer', amount: 500, date: '—', status: 'Pending' },
-      { id: 'JP-2026-005', item: 'Junior Network Technician', amount: 500, date: '2026-07-01', status: 'Refunded' }
-    ]
+    const employerTransactions = transactions
 
     if (tab === 'Job Posting Transactions' || !tab) {
       content = (
@@ -958,7 +952,7 @@ const close = () => { setModal(null); setNotes(''); setReviewError('') }
                   ['Status', s.status]
                 ]
               )},
-              { label: 'Express Interest', run: (s) => showMessage('Sponsorship inquiry sent to LGU') }
+              { label: 'Express Interest', run: () => showMessage('Sponsorship interest noted for this demo; contact the LGU to proceed.') }
             ]}
           />
         </>
@@ -1383,7 +1377,7 @@ const close = () => { setModal(null); setNotes(''); setReviewError('') }
         />
       )}
 
-      {(modal?.kind === 'create-vacancy' || modal?.kind === 'edit-vacancy') && <RecordEditor key={modal.record.id} title={modal.title} record={modal.record} fields={jobFields} onClose={close} saveLabel={modal.kind === 'create-vacancy' ? 'Save Draft' : 'Save Changes'} validate={draft => draft.salary.max < draft.salary.min ? { 'salary.max': 'Maximum salary must be at least the minimum.' } : draft.deadline < today() ? { deadline: 'Choose today or a later date.' } : {}} onSave={draft => { saveOwnedRecord('job', draft); close(); showMessage('Vacancy saved.'); navigate('vacancies') }} />}
+      {(modal?.kind === 'create-vacancy' || modal?.kind === 'edit-vacancy') && <RecordEditor key={modal.record.id} title={modal.title} record={{ requiredSkillLevel: 'Intermediate', minimumExperienceMonths: 0, ...modal.record }} fields={jobFields} onClose={close} saveLabel={modal.kind === 'create-vacancy' ? 'Save Draft' : 'Save Changes'} validate={draft => draft.salary.max < draft.salary.min ? { 'salary.max': 'Maximum salary must be at least the minimum.' } : draft.deadline < today() ? { deadline: 'Choose today or a later date.' } : {}} onSave={draft => { saveOwnedRecord('job', draft); close(); showMessage('Vacancy saved.'); navigate('vacancies') }} />}
       {modal?.kind === 'schedule' && <RecordEditor key={modal.interviewId || modal.applicationId} title={modal.title} record={modal.record} fields={interviewFields} onClose={close} onSave={draft => { saveInterview(modal.applicationId, draft, modal.interviewId); close(); showMessage('Interview schedule saved.') }} />}
 
       {modal?.kind === 'edit-employer-profile' && <RecordEditor title="Edit Company Profile" record={modal.record} fields={organizationFields} onClose={close} onSave={draft => { saveOrganization(currentEmployer.id, draft); close(); showMessage('Company profile updated.') }} />}

@@ -1,4 +1,6 @@
 import { useSyncExternalStore } from 'react'
+import { skillId, skillName, skillLevel, levelName } from '../services/intelligenceConfig.js'
+import { matchJob } from '../services/matchingEngine.js'
 import * as lgu from './lguData'
 import * as resident from './residentData'
 import * as employer from './employerData'
@@ -10,7 +12,7 @@ export const uid = prefix => `${prefix}-${crypto.randomUUID()}`
 const copy = value => structuredClone(value)
 const read = key => { try { return JSON.parse(localStorage.getItem(key)) } catch { return null } }
 const merge = (rows, key = r => r.id) => [...new Map(rows.map(r => [key(r), r])).values()]
-const skillIds = values => [...new Set((values || []).map(v => lgu.skills.find(s => s.id === v || s.name.toLowerCase() === String(v).toLowerCase())?.id).filter(Boolean))]
+const skillIds = values => [...new Set((values || []).map(skillId).filter(Boolean))]
 const asApplication = a => ({ ...a, residentId: a.residentId || 'R-001', jobId: a.jobId || a.vacancyId, status: a.status === 'Applied' ? 'Submitted' : a.status, lastUpdate: a.lastUpdate || a.appliedDate })
 const asRegistration = r => ({ ...r, residentId: r.residentId || 'R-001', programId: r.programId || r.trainingId, status: r.status === 'In Progress' ? 'In Training' : r.status, registrationDate: r.registrationDate || r.enrollmentDate, progress: r.progress || 0, attendance: r.attendance || 0 })
 
@@ -46,17 +48,34 @@ function initialState() {
   profile.experience ||= []
   profile.certifications ||= []
   // Normalize IDs and dates
-  profile.skills = profile.skills.map((s, i) => ({ ...s, id: s.id?.toString() || uid('SKILL') }))
-  profile.educationEntries = profile.educationEntries.map((e, i) => ({ ...e, id: e.id?.toString() || uid('EDU') }))
-  profile.experience = profile.experience.map((e, i) => ({ ...e, id: e.id?.toString() || uid('EXP'), startDate: /^\d{4}-/.test(e.startDate) ? e.startDate : '2023-06-01', endDate: /^\d{4}-/.test(e.endDate) ? e.endDate : '2025-08-31' }))
-  profile.certifications = profile.certifications.map((c, i) => ({ ...c, id: c.id?.toString() || uid('CERT'), dateIssued: /^\d{4}-/.test(c.dateIssued) ? c.dateIssued : '2025-05-01' }))
+  profile.skills = profile.skills.map((s) => ({ ...s, id: s.id?.toString() || uid('SKILL') }))
+  profile.educationEntries = profile.educationEntries.map((e) => ({ ...e, id: e.id?.toString() || uid('EDU') }))
+  profile.experience = profile.experience.map((e) => ({ ...e, id: e.id?.toString() || uid('EXP'), startDate: /^\d{4}-/.test(e.startDate) ? e.startDate : '2023-06-01', endDate: /^\d{4}-/.test(e.endDate) ? e.endDate : '2025-08-31' }))
+  profile.certifications = profile.certifications.map((c) => ({ ...c, id: c.id?.toString() || uid('CERT'), dateIssued: /^\d{4}-/.test(c.dateIssued) ? c.dateIssued : '2025-05-01' }))
   const interviews = employer.interviews.filter(i => applications.some(a => a.id === i.applicationId)).map(i => ({ ...i, jobId: i.vacancyId }))
   const state = { version: 1, orgs, profiles: { 'R-001': profile }, jobs, programs, applications, registrations, interviews, businesses, placements: copy(lgu.placements), transactions: copy(lgu.transactions), sponsors: copy(lgu.sponsors), users: copy(oldLGU.users || lgu.initialUsers), settings: { lgu: oldLGU.settings || { name: 'Municipality of San Jose', province: 'Occidental Mindoro', region: 'MIMAROPA', office: 'Public Employment Service Office', email: 'peso@sanjose.example.test', phone: '043 555 0100', address: 'Municipal Hall, San Jose', density: 'Comfortable', period: 'This Year' }, resident: { emailNotifications: true }, employer: oldEmployer.settings || { emailNotifications: { matches: true, applications: true, interviews: true, summary: false } }, training: oldTraining.settings || { emailNotifications: { registrations: true, completions: true, payments: true, summary: false } } }, activeEmployerId: 'E-002', activeAgencyId: 'T-001', notifications: { resident: copy(resident.notifications), employer: copy(employer.employerNotifications), training: copy(training.trainingNotifications), lgu: copy(read('entritifai-lgu-notifications-v1') || lgu.lguNotifications) }, invitations: [] }
   state.baseline = { applications: applications.length, shortlisted: applications.filter(a => a.status === 'Shortlisted' || a.status === 'Interview Scheduled').length, interviews: interviews.length, placements: state.placements.length, registrations: registrations.filter(r => r.status !== 'Cancelled').length, completions: registrations.filter(r => r.status === 'Completed').length, activeJobs: jobs.filter(j => j.status === 'Active').length, verifiedEmployers: orgs.filter(o => o.type === 'Employer' && o.status === 'Verified').length, verifiedAgencies: orgs.filter(o => o.type === 'Training Agency' && o.status === 'Verified').length, jobs: jobs.map(j => ({ id: j.id, applicantCount: applications.filter(a => a.jobId === j.id).length })) }
   return state
 }
+function upgradeIntelligence(s) {
+  if (s.intelligenceVersion === 1) return s
+  const profiles = { ...s.profiles }
+  for (const candidate of employer.candidateMatches) {
+    if (profiles[candidate.residentId]) continue
+    profiles[candidate.residentId] = { id: candidate.residentId, name: candidate.name, location: candidate.location || 'San Jose', skills: (candidate.skills || []).map((name, i) => ({ id: `SEED-${i}`, name, level: 'Intermediate' })), educationEntries: [{ id: 'EDU-1', course: candidate.education, level: '' }], experience: [{ id: 'EXP-1', position: candidate.experience || '', duration: candidate.experience || '' }], certifications: (candidate.certifications || []).map((name, i) => ({ id: `CERT-${i}`, name })), careerInterests: ['IT Support'], entrepreneurship: {}, profileCompletion: 0 }
+  }
+  const jobs = s.jobs.map(j => {
+    const legacy = j.id === 'J-001' && JSON.stringify(j.requiredSkills) === JSON.stringify(['Network Configuration', 'Active Directory', 'Cybersecurity Fundamentals'])
+    return { ...j, ...(legacy ? { requiredSkills: ['Computer Diagnostics', 'Hardware Installation', 'Technical Support', 'Network Configuration', 'Active Directory'], preferredSkills: ['Customer Service', 'Cybersecurity Fundamentals'] } : {}), acceptedEducation: j.acceptedEducation || (j.id === 'J-001' ? ['BS Information Technology', 'BS Computer Science', 'Related field'] : []), minimumExperienceMonths: j.minimumExperienceMonths ?? (j.id === 'J-001' ? 24 : 0), requiredCertifications: j.requiredCertifications || [], preferredCertifications: j.preferredCertifications || (j.id === 'J-001' ? ['CSS NC II'] : []), requiredSkillLevel: j.requiredSkillLevel || 'Intermediate' }
+  }).map(j => ({ ...j, skillIds: skillIds(j.requiredSkills) }))
+  const programs = s.programs.map(p => ({ ...p, name: p.id === 'TR-001' && p.name === 'Network Administration Training' ? 'Network Administration Fundamentals' : p.name, developedLevel: p.developedLevel || 'Intermediate', prerequisiteSkills: p.prerequisiteSkills || [] }))
+  const transactions = s.transactions.map(t => { const org = s.orgs.find(o => o.name === t.organization); const item = (t.kind === 'job' ? jobs : programs).find(r => (r.title || r.name) === t.item || r.id === 'TR-001' && t.item === 'Network Administration Training'); return { ...t, organizationId: t.organizationId || org?.id, itemId: t.itemId || item?.id } })
+  const notifications = Object.fromEntries(Object.entries(s.notifications).map(([role, rows]) => [role, rows.filter(n => !/92% match|completed Network Configuration|new candidate matches/i.test(n.message || '')).map(n => ({ ...n, message: (n.message || '').replaceAll('Network Administration Training', 'Network Administration Fundamentals') }))]))
+  return { ...s, jobs, programs, profiles, transactions, notifications, intelligenceVersion: 1, intelligenceBaseline: { jobs: copy(jobs), profiles: copy(profiles) }, reassessment: { previousProfile: copy(profiles['R-001']), date: today(), reason: 'Initial career profile' } }
+}
 let state = read(DEMO_KEY)
 if (!state?.version || !state?.baseline) state = initialState()
+state = upgradeIntelligence(state)
 const listeners = new Set()
 const subscribe = fn => { listeners.add(fn); return () => listeners.delete(fn) }
 export function getDemoState() { return state }
@@ -67,7 +86,7 @@ export function updateDemo(updater) {
   listeners.forEach(fn => fn())
 }
 export function useDemoStore() { return useSyncExternalStore(subscribe, getDemoState, getDemoState) }
-window.addEventListener('storage', event => { if (event.key === DEMO_KEY && event.newValue) { const next = read(DEMO_KEY); if (next?.version === 1) { state = next; listeners.forEach(fn => fn()) } } })
+window.addEventListener('storage', event => { if (event.key === DEMO_KEY && event.newValue) { const next = read(DEMO_KEY); if (next?.version === 1) { state = upgradeIntelligence(next); listeners.forEach(fn => fn()) } } })
 export function setActor(role, id) { updateDemo(s => ({ ...s, [role === 'employer' ? 'activeEmployerId' : 'activeAgencyId']: id })) }
 function notify(s, role, title, message, link, type = 'application') {
   return { ...s, notifications: { ...s.notifications, [role]: [{ id: uid('N'), type, title, message, date: today(), link: `/${role}/${link}`, read: false }, ...s.notifications[role]] } }
@@ -79,7 +98,7 @@ export function applyForJob(jobId, note = '') {
   ensure(activeAccount(s, 'R-001'), 'This account is inactive. Contact the LGU.')
   ensure(job?.status === 'Active' && (!job.deadline || job.deadline >= today()), 'This vacancy is already closed or expired.')
   ensure(!s.applications.some(a => a.jobId === jobId && a.residentId === 'R-001'), 'You already applied for this vacancy.')
-  const app = { id: uid('APP'), residentId: 'R-001', jobId, matchScore: resident.recommendedJobs.find(j => j.id === jobId)?.matchScore || 82, status: 'Submitted', appliedDate: today(), lastUpdate: today(), notes: note, coverLetter: note, resume: 'Resume.pdf', createdInDemo: true }
+  const app = { id: uid('APP'), residentId: 'R-001', jobId, matchScore: matchJob(s.profiles['R-001'], job, today()).matchScore, status: 'Submitted', appliedDate: today(), lastUpdate: today(), notes: note, coverLetter: note, resume: 'Resume.pdf', createdInDemo: true }
   updateDemo(notify({ ...s, applications: [...s.applications, app] }, 'employer', 'New application received', `${s.profiles['R-001'].name} applied for ${job.title}.`, 'applicants'))
 }
 export function updateApplication(id, status) {
@@ -93,7 +112,7 @@ export function updateApplication(id, status) {
     ensure(job.status === 'Active', 'Reopen recruitment before recording a new hire.')
     ensure((job.filled || 0) < job.openings, 'All vacancy openings are already filled.')
     const name = s.profiles[app.residentId]?.name || app.applicantName || lgu.residents.find(r => r.id === app.residentId)?.name
-    next.placements = [...s.placements, { id: uid('PL'), applicationId: id, residentId: app.residentId, jobId: job.id, resident: name, job: job.title, employer: s.orgs.find(o => o.id === job.employerId)?.name, match: app.matchScore, hired: today(), status: 'Employed', createdInDemo: true }]
+    next.placements = [...s.placements, { id: uid('PL'), applicationId: id, residentId: app.residentId, jobId: job.id, resident: name, job: job.title, employer: s.orgs.find(o => o.id === job.employerId)?.name, match: matchJob(s.profiles[app.residentId], job, today()).matchScore, hired: today(), status: 'Employed', createdInDemo: true }]
     next.jobs = s.jobs.map(j => j.id === job.id ? { ...j, filled: (j.filled || 0) + 1 } : j)
     if (s.profiles[app.residentId]) next.profiles = { ...s.profiles, [app.residentId]: { ...s.profiles[app.residentId], employmentStatus: 'Employed' } }
   }
@@ -131,7 +150,20 @@ export function updateRegistration(id, status, values = {}) {
   ensure(status === 'Cancelled' ? r.residentId === 'R-001' && r.status === 'Registered' : p.agencyId === s.activeAgencyId, 'This action is not available for this registration.')
   ensure(status !== 'Completed' || r.status === 'In Training', 'Mark the participant In Training before completing the program.')
   const updated = { ...r, ...values, status, progress: status === 'Completed' ? 100 : values.progress ?? r.progress, completionDate: status === 'Completed' ? today() : null }
-  updateDemo(notify({ ...s, registrations: s.registrations.map(row => row.id === id ? updated : row) }, status === 'Cancelled' ? 'training' : 'resident', 'Training status updated', `${p.name}: ${status}.`, status === 'Cancelled' ? 'participants' : 'training?tab=My%20Training', 'training'))
+  let profiles = s.profiles, reassessment = s.reassessment
+  if (status === 'Completed' && profiles[r.residentId]) {
+    const previous = profiles[r.residentId], next = copy(previous)
+    for (const developed of p.skillIds) {
+      const target = p.developedLevel === 'Advanced' ? 3 : 2
+      if (skillLevel(next, developed) >= target) continue
+      const index = next.skills.findIndex(skill => skillId(skill) === developed)
+      const entry = { ...(index >= 0 ? next.skills[index] : { id: uid('SKILL'), name: skillName(developed) }), level: levelName(target), source: `Completed ${p.name}`, trainingRegistrationId: id }
+      if (index >= 0) next.skills[index] = entry; else next.skills.push(entry)
+    }
+    profiles = { ...profiles, [r.residentId]: next }
+    if (r.residentId === 'R-001') reassessment = { previousProfile: copy(previous), date: today(), reason: `Completed ${p.name}` }
+  }
+  updateDemo(notify({ ...s, profiles, reassessment, registrations: s.registrations.map(row => row.id === id ? updated : row) }, status === 'Cancelled' ? 'training' : 'resident', 'Training status updated', `${p.name}: ${status}.`, status === 'Cancelled' ? 'participants' : 'training?tab=My%20Training', 'training'))
 }
 export function saveOwnedRecord(kind, draft) {
   const s = state, jobs = kind === 'job', key = jobs ? 'jobs' : 'programs', ownerKey = jobs ? 'employerId' : 'agencyId', owner = jobs ? s.activeEmployerId : s.activeAgencyId
@@ -165,7 +197,8 @@ export function inviteCandidate(match) {
   ensure(!s.invitations.some(i => i.residentId === match.residentId && i.jobId === match.vacancyId), 'An invitation was already sent.')
   updateDemo(notify({ ...s, invitations: [...s.invitations, { id: uid('INV'), residentId: match.residentId, jobId: match.vacancyId }] }, 'resident', 'Invitation to apply', `${s.orgs.find(o => o.id === s.activeEmployerId)?.name} invited you to review a vacancy.`, 'employment?tab=Recommended%20Jobs', 'job_match'))
 }
-export function saveProfile(profile) { updateDemo(s => ({ ...s, profiles: { ...s.profiles, [profile.id]: copy(profile) } })) }
+export function saveProfile(profile) { updateDemo(s => ({ ...s, reassessment: { previousProfile: copy(s.profiles[profile.id]), date: today(), reason: 'Career profile updated' }, profiles: { ...s.profiles, [profile.id]: copy(profile) } })) }
+export function reassessCareer() { updateDemo(s => ({ ...s, reassessment: { ...s.reassessment, date: today() } })) }
 export function setNotifications(role, updater) { updateDemo(s => ({ ...s, notifications: { ...s.notifications, [role]: typeof updater === 'function' ? updater(s.notifications[role]) : updater } })) }
 export function setSettings(role, settings) { updateDemo(s => ({ ...s, settings: { ...s.settings, [role]: settings } })) }
 export { skillIds }
