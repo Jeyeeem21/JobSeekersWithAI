@@ -1,5 +1,5 @@
 import { useTrainingModel, setTrainingState } from '../data/demoModels'
-import { setActor, saveOwnedRecord, recordLifecycle, saveOrganization, updateRegistration } from '../data/demoStore'
+import { setActor, saveOwnedRecord, recordLifecycle, saveOrganization, updateRegistration, renewSubscription } from '../data/demoStore'
 import { RecordEditor } from '../components/RecordEditor'
 import { programFields, organizationFields } from '../data/formSchemas'
 import { useState } from 'react'
@@ -17,7 +17,7 @@ const modules = {
   participants: { title: 'Participants', description: 'Track participant registrations and progress.' },
   completion: { title: 'Training Completion', description: 'Manage completion records and certificates.' },
   analytics: { title: 'Analytics', description: 'Training performance and impact metrics.', tabs: ['Overview', 'Program Performance', 'Skill Development', 'Employment Outcomes'] },
-  transactions: { title: 'Transactions & Partnerships', description: 'Listing fees and sponsorship opportunities.', tabs: ['Listing Transactions', 'Sponsorships'] },
+  transactions: { title: 'Subscriptions & Partnerships', description: 'Manage your fisheries training subscription and partnerships.', tabs: ['Subscription', 'Sponsorships'] },
   settings: { title: 'Settings', description: 'Manage your account and notification preferences.' }
 }
 
@@ -27,7 +27,7 @@ const filter = (key, label, options, test) => ({ key, label, options, test })
 const formatDate = (dateStr) => new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 
 export function TrainingDashboard({ page, navigate, showMessage }) {
-  const { state, currentAgency, agencyPrograms, organizations, skillGapAlignment, trainingTransactions, trainingSponsors } = useTrainingModel()
+  const { state, currentAgency, subscription, agencyPrograms, organizations, skillGapAlignment, trainingTransactions, trainingSponsors } = useTrainingModel()
   const setState = setTrainingState
   const [modal, setModal] = useState(null)
   const [, setNotes] = useState('')
@@ -172,7 +172,7 @@ const close = () => { setModal(null); setNotes('') }
               </div>
               <div>
                 <div>
-                  <strong>Pay Listing Fee</strong>
+                  <strong>Active Subscription Required</strong>
                   <small>PHP 300 per program to publish</small>
                 </div>
                 <Status value="Pending" />
@@ -741,7 +741,7 @@ const close = () => { setModal(null); setNotes('') }
               Skill Gap Analysis
             </div>
             <div style={{ fontSize: '13px', color: '#1e3a8a' }}>
-              Create training programs that address high-priority skill gaps. Payment enables publication, but relevance to skill gaps determines recommendation to participants.
+              Create fisheries training programs that address high-priority skill gaps. An active subscription enables publication, while relevance determines recommendation to participants.
             </div>
           </div>
         </div>
@@ -1182,6 +1182,7 @@ const close = () => { setModal(null); setNotes('') }
 
   // Transactions & Partnerships
   if (path === 'transactions') {
+    if (tab === 'Subscription') content = <><Alert type="info">An active subscription enables publishing fisheries training programs. Subscription plan never changes training relevance or resident recommendations.</Alert><Panel title="Training Agency Subscription"><div className="profile-section-body"><Facts items={[[ 'Status', subscription?.status || 'No subscription' ], [ 'Plan', subscription?.plan || 'Choose a plan' ], [ 'Expiry', subscription?.expiryDate || '—' ], [ 'Prototype amount', subscription ? money(subscription.amount) : '—' ]]} /><div className="lgu-row-actions" style={{ marginTop: 16 }}>{['1-Month Subscription','6-Month Subscription','1-Year Subscription'].map(plan => <Button key={plan} onClick={() => attempt(() => { renewSubscription(currentAgency.id, plan); showMessage('Subscription activated. You can now publish fisheries training.') })}>{plan}</Button>)}</div></div></Panel></>
     if (!tab || tab === 'Listing Transactions') {
       // Sample transaction data for demo
       const sampleTransactions = trainingTransactions.length === 0 ? [
@@ -1957,7 +1958,7 @@ const close = () => { setModal(null); setNotes('') }
 
       {modal?.kind === 'edit-agency-profile' && <RecordEditor title="Edit Agency Profile" record={modal.record} fields={organizationFields} onClose={close} onSave={draft => { saveOrganization(currentAgency.id, draft); close(); showMessage('Agency profile updated.') }} />}
 
-      {modal?.kind === 'lifecycle' && <ConfirmationDialog title={modal.title} description={modal.error || (modal.action === 'Publish' ? 'Confirm publication. The listing fee is recorded as a mock payment only; payment does not affect recommendations.' : 'Confirm this lifecycle change. Historical records remain visible.')} confirmLabel={modal.action} variant={modal.action === 'Delete Draft' ? 'danger' : 'primary'} onClose={close} onConfirm={() => attempt(() => { recordLifecycle('program', modal.record.id, modal.action); showMessage('Record updated.') })} />}
+      {modal?.kind === 'lifecycle' && <ConfirmationDialog title={modal.title} description={modal.error || (modal.action === 'Publish' ? 'Confirm publication. A verified agency with an active subscription may publish; subscription never affects relevance.' : 'Confirm this lifecycle change. Historical records remain visible.')} confirmLabel={modal.action} variant={modal.action === 'Delete Draft' ? 'danger' : 'primary'} onClose={close} onConfirm={() => attempt(() => { recordLifecycle('program', modal.record.id, modal.action); showMessage('Record updated.') })} />}
 
     </div>
   )

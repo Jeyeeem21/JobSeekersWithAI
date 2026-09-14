@@ -179,7 +179,7 @@ export const trainingSponsors = sponsors.filter(s => s.program && programs.some(
 // Training agency notifications
 export const trainingNotifications = [
   { id: 'TN-1', type: 'verification', title: 'Verification pending', message: 'Your agency verification is under LGU review. You\'ll be able to publish programs once verified.', date: '2 hours ago', link: '/training/profile', read: false },
-  { id: 'TN-2', type: 'training', title: 'Welcome to EntritifAI', message: 'Complete your agency profile and prepare training programs for publication.', date: '1 day ago', link: '/training/profile', read: false },
+  { id: 'TN-2', type: 'training', title: 'Welcome to EntretifAI', message: 'Complete your agency profile and prepare training programs for publication.', date: '1 day ago', link: '/training/profile', read: false },
   { id: 'TN-3', type: 'insight', title: 'High demand for Network skills', message: '120 residents need Network Configuration training. Current supply: 40 slots.', date: '1 day ago', link: '/training/analytics', read: true }
 ]
 

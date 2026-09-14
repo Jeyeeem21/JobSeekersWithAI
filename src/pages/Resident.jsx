@@ -17,10 +17,10 @@ import './lgu/lgu.css'
 
 const modules = {
   dashboard: { title: 'Dashboard', description: 'Track your career profile, job opportunities, training progress, and entrepreneurship pathway.' },
-  profile: { title: 'Career Profile', description: 'Your professional information and qualifications.', tabs: ['Profile Summary', 'Skills & Qualifications'] },
-  employment: { title: 'Employment', description: 'Job recommendations, applications, and interviews.', tabs: ['Recommended Jobs', 'My Applications'] },
-  training: { title: 'Skills Development', description: 'Skill gaps, training recommendations, and progress.', tabs: ['Skill Gaps', 'Recommended Training', 'My Training'] },
-  entrepreneurship: { title: 'Entrepreneurship', description: 'Business recommendations and registration.', tabs: ['Business Recommendations', 'Business Preparation', 'Business Registration'] },
+  profile: { title: 'Fisheries Profile', description: 'Your fisheries qualifications, experience, and livelihood information.', tabs: ['Profile Summary', 'Skills & Qualifications'] },
+  employment: { title: 'Fisheries Employment', description: 'Fisheries job recommendations, applications, and interviews.', tabs: ['Recommended Jobs', 'My Applications'] },
+  training: { title: 'Fisheries Skills Development', description: 'Fisheries skill gaps, training recommendations, and progress.', tabs: ['Skill Gaps', 'Recommended Training', 'My Training'] },
+  entrepreneurship: { title: 'Fisheries Entrepreneurship', description: 'Fisheries livelihood recommendations and business registration.', tabs: ['Business Recommendations', 'Business Preparation', 'Business Registration'] },
   progress: { title: 'Progress', description: 'Track your career journey and achievements.', tabs: ['Career Progress', 'Timeline'] },
   settings: { title: 'Settings', description: 'Manage your account preferences.' }
 }

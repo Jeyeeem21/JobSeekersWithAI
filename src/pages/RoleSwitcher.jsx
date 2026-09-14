@@ -5,17 +5,17 @@ const roles = [
   {
     id: 'resident',
     icon: User,
-    title: 'Resident / Job Seeker',
-    description: 'Find jobs, develop skills, explore entrepreneurship opportunities',
-    features: ['AI Job Matching', 'Skills Assessment', 'Training Recommendations', 'Career Guidance'],
+    title: 'Resident / Fisheries Job Seeker',
+    description: 'Find fisheries jobs, develop fisheries skills, and explore livelihoods',
+    features: ['Explainable Job Matching', 'Fisheries Assessment', 'Training Recommendations', 'Livelihood Guidance'],
     color: 'teal'
   },
   {
     id: 'employer',
     icon: Building,
-    title: 'Employer / Business',
-    description: 'Post jobs, find qualified candidates, manage hiring process',
-    features: ['Job Posting', 'Candidate Matching', 'Applicant Management', 'Hiring Analytics'],
+    title: 'Fisheries Employer / Business',
+    description: 'Post fisheries jobs, find qualified workers, and manage hiring',
+    features: ['Subscription Publishing', 'Candidate Matching', 'Applicant Management', 'Fisheries Analytics'],
     color: 'blue'
   },
   {
@@ -50,17 +50,17 @@ export function RoleSwitcher({ onSelectRole }) {
             </div>
             
             <h1>
-              Connecting <span className="highlight">Opportunities</span> with <span className="highlight">Local Talent</span>
+              Connecting <span className="highlight">Fisheries Opportunities</span> with <span className="highlight">Local Talent</span>
             </h1>
             
             <p className="hero-description">
-              EntritifAI brings together residents, employers, training agencies, and local government
-              to create a thriving community through intelligent matching, skills development, and data-driven insights.
+              EntretifAI brings together residents, employers, training agencies, and local government
+              to strengthen fisheries employment, skills development, livelihoods, and data-informed LGU action.
             </p>
           </div>
 
           <div className="ecosystem-diagram">
-            <div className="ecosystem-node">Residents</div>
+            <div className="ecosystem-node">Fisheries Job Seekers</div>
             <div className="ecosystem-connector">↔</div>
             <div className="ecosystem-node">Employers</div>
             <div className="ecosystem-connector">↔</div>
@@ -112,7 +112,7 @@ export function RoleSwitcher({ onSelectRole }) {
           </div>
           
           <div className="footer-info">
-            <span>© 2025 EntritifAI</span>
+            <span>© 2026 EntretifAI</span>
             <span>·</span>
             <span>Empowering local possibilities</span>
           </div>

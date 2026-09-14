@@ -3,13 +3,16 @@ export const TRAINING_WEIGHTS = { gaps: .5, career: .25, eligibility: .1, availa
 export const RULES = { requiredSkillWeight: 4, preferredSkillWeight: 1, relevantMatch: 40, highGap: 50, mediumGap: 15, highDemand: 30, alignmentCompletions: 20, lowPlacementShare: .25 }
 export const LEVELS = { None: 0, Beginner: 1, Intermediate: 2, Advanced: 3 }
 export const SKILLS = {
-  network: ['Network Configuration', 'Basic Networking', 'Networking', 'Network Fundamentals'],
-  directory: ['Active Directory'], security: ['Cybersecurity Fundamentals'],
-  excel: ['Microsoft Excel', 'Excel'], marketing: ['Digital Marketing'],
-  diagnostics: ['Computer Diagnostics', 'Computer Troubleshooting', 'Troubleshooting'],
-  hardware: ['Hardware Installation', 'Hardware Repair'], support: ['Technical Support', 'IT Support'],
-  service: ['Customer Service', 'Customer Management'], linux: ['Linux Administration'],
-  bookkeeping: ['Bookkeeping'], costing: ['Pricing / Costing', 'Service Costing'],
+  'water-quality': ['Water Quality Monitoring', 'Water Quality Management'],
+  feeding: ['Fish Feeding Management', 'Feeding Management'],
+  'fish-health': ['Fish Health Management', 'Fish Health'],
+  aquaculture: ['Aquaculture Operations', 'Aquaculture Production'],
+  handling: ['Fish Handling and Post-Harvest', 'Fish Handling', 'Post-Harvest Handling'],
+  'food-safety': ['Food Safety for Fisheries Products', 'Food Safety'],
+  hatchery: ['Hatchery Operations'], processing: ['Fish Processing'],
+  marketing: ['Fisheries Marketing', 'Fish Marketing'],
+  bookkeeping: ['Bookkeeping'], costing: ['Fisheries Costing and Pricing', 'Costing and Pricing'],
+  service: ['Customer Service', 'Customer Management'],
 }
 export const normalize = value => String(value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 export function skillId(value) {
@@ -23,9 +26,9 @@ export const available = (record, date) => ['Active', 'Upcoming', 'Full'].includ
 export const percent = n => Math.round(Math.max(0, Math.min(1, n)) * 100)
 export const categoryOf = text => {
   const s = normalize(text)
-  if (/computer|network|technical|information technology|\bit\b|linux|server/.test(s)) return 'technology'
-  if (/market|design|content|social media/.test(s)) return 'marketing'
-  if (/office|admin|excel|record|data entry/.test(s)) return 'administration'
-  if (/food|cook|baking/.test(s)) return 'food'
+  if (/aquaculture|tilapia|milkfish|catfish|fishpond|water quality|feeding|fish health/.test(s)) return 'aquaculture'
+  if (/hatchery|nursery/.test(s)) return 'hatchery'
+  if (/process|handling|post harvest|food safety|smoked|dried|debon/.test(s)) return 'processing'
+  if (/market|vendor|trading|retail|delivery/.test(s)) return 'marketing'
   return s
 }

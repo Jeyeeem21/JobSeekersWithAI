@@ -5,7 +5,7 @@ import { Bars, Facts, Flow, Metrics, Status, Trend } from './Workspace'
 
 export function Rate({ period }) {
   const { snapshot } = useLguData()
-  return <Panel title="Platform Employment Placement Rate" description="Among active registered job seekers in the tracked population."><div className="lgu-rate"><strong>{placementRate(period.hired)}</strong><div><b>{period.hired} hires ÷ {snapshot.active} active job seekers × 100</b><p>Based only on registered and tracked job seekers in EntritifAI.</p><small>{period.label}. Active denominator: fixed September snapshot cohort; total registered: 1,248.</small></div></div></Panel>
+  return <Panel title="Platform Employment Placement Rate" description="Among active registered job seekers in the tracked population."><div className="lgu-rate"><strong>{placementRate(period.hired)}</strong><div><b>{period.hired} hires ÷ {snapshot.active} active job seekers × 100</b><p>Based only on registered and tracked job seekers in EntretifAI.</p><small>{period.label}. Active denominator: fixed September snapshot cohort; total registered: 1,248.</small></div></div></Panel>
 }
 export function Funnel({ period }) {
   return <Flow steps={[[ 'Applications', period.applications], ['Shortlisted', period.shortlisted], ['Interviewed', period.interviews], ['Hired', period.hired]]} />

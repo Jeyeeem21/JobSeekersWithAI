@@ -172,3 +172,9 @@ body:has(dialog[open]) { overflow: hidden; }
   .notifications-modal-header { flex-wrap: wrap; }
 }
 @media (max-width: 400px) { .lgu-facts { grid-template-columns: minmax(0, 1fr); } }
+
+/* Shared EntretifAI fisheries blue accent; status colors stay semantic. */
+.lgu-snapshot i, .lgu-bar-track > span, .lgu-trend span { background: #0B5FA5; }
+.lgu-workspace .tab-active { color: #0B5FA5; border-bottom-color: #0B5FA5; background: #F5FAFE; }
+.lgu-rate > strong, .lgu-flow small, .lgu-suggestion h3 { color: #0B5FA5; }
+.lgu-suggestion { background: #F5FAFE; border-left-color: #0B5FA5; }

@@ -11,17 +11,17 @@ import { useEffect, useRef, useState } from 'react'
 const navigationConfig = {
   resident: [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'profile', label: 'Career Profile', icon: User },
+    { id: 'profile', label: 'Fisheries Profile', icon: User },
     { id: 'employment', label: 'Employment', icon: Briefcase },
     { id: 'training', label: 'Skills Development', icon: GraduationCap },
-    { id: 'entrepreneurship', label: 'Entrepreneurship', icon: Sprout },
+    { id: 'entrepreneurship', label: 'Fisheries Entrepreneurship', icon: Sprout },
     { id: 'progress', label: 'Progress', icon: TrendingUp },
     { id: 'settings', label: 'Settings', icon: Settings }
   ],
   employer: [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'company', label: 'Company & Verification', icon: Building },
-    { id: 'vacancies', label: 'Job Vacancies', icon: Briefcase },
+    { id: 'company', label: 'Fisheries Business & Verification', icon: Building },
+    { id: 'vacancies', label: 'Fisheries Job Vacancies', icon: Briefcase },
     { id: 'matches', label: 'Candidate Matches', icon: Target },
     { id: 'applicants', label: 'Applicants', icon: FileCheck },
     { id: 'interviews', label: 'Interviews', icon: Calendar },
@@ -41,7 +41,7 @@ const navigationConfig = {
   ],
   lgu: [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'people', label: 'People & Organizations', icon: Users },
+    { id: 'people', label: 'Fisheries People & Organizations', icon: Users },
     { id: 'opportunities', label: 'Opportunities', icon: Briefcase },
     { id: 'employment', label: 'Employment', icon: FileCheck },
     { id: 'entrepreneurship', label: 'Entrepreneurship', icon: Sprout },
@@ -54,8 +54,8 @@ const navigationConfig = {
 }
 
 const roleLabels = {
-  resident: 'Resident Portal',
-  employer: 'Employer Portal',
+  resident: 'Fisheries Job Seeker Portal',
+  employer: 'Fisheries Employer Portal',
   training: 'Private Training Agency',
   lgu: 'LGU Administrator'
 }
@@ -67,7 +67,7 @@ export function Brand() {
         <MapPin size={20} />
       </span>
       <div>
-        Entritif<span className="brand-ai">AI</span>
+        Entretif<span className="brand-ai">AI</span>
         <small>WORKFORCE ECOSYSTEM</small>
       </div>
     </div>
@@ -353,7 +353,7 @@ export function AppShell({ role, page, menu, onMenuToggle, onMenuClose, onNaviga
           {children}
           
           <footer className="app-footer">
-            <span>© 2025 EntritifAI. Empowering local possibilities.</span>
+            <span>© 2026 EntretifAI. Empowering local possibilities.</span>
             <span>
               <span className="footer-dot" />
               Frontend prototype · {role === 'lgu' ? 'Phase 2' : 'Phase 1'}

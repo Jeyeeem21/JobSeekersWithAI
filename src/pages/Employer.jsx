@@ -1,5 +1,5 @@
 import { useEmployerModel, setEmployerState } from '../data/demoModels'
-import { setActor, saveOwnedRecord, recordLifecycle, saveOrganization, updateApplication, saveInterview, interviewAction, inviteCandidate, today } from '../data/demoStore'
+import { setActor, saveOwnedRecord, recordLifecycle, saveOrganization, updateApplication, saveInterview, interviewAction, inviteCandidate, renewSubscription, today } from '../data/demoStore'
 import { RecordEditor } from '../components/RecordEditor'
 import { jobFields, organizationFields, interviewFields } from '../data/formSchemas'
 import { useState } from 'react'
@@ -18,7 +18,7 @@ const modules = {
   applicants: { title: 'Applicants', description: 'Review and manage job applications.' },
   interviews: { title: 'Interviews', description: 'Schedule and track candidate interviews.' },
   analytics: { title: 'Analytics', description: 'Recruitment metrics and insights.', tabs: ['Overview', 'Recruitment Funnel', 'Skill Gaps', 'Hiring Outcomes'] },
-  transactions: { title: 'Transactions & Partnerships', description: 'Job posting payments and sponsorship opportunities.', tabs: ['Job Posting Transactions', 'Training Sponsorships'] },
+  transactions: { title: 'Subscriptions & Partnerships', description: 'Manage your fisheries recruitment subscription and partnerships.', tabs: ['Subscription', 'Training Sponsorships'] },
   settings: { title: 'Settings', description: 'Manage your account and notification preferences.' }
 }
 
@@ -28,7 +28,7 @@ const filter = (key, label, options, test) => ({ key, label, options, test })
 const formatDate = (dateStr) => new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 
 export function EmployerDashboard({ page, navigate, showMessage }) {
-  const { state, currentEmployer, employerVacancies, applications, interviews, candidateMatches, hires, organizations, transactions } = useEmployerModel()
+  const { state, currentEmployer, subscription, employerVacancies, applications, interviews, candidateMatches, hires, organizations, transactions } = useEmployerModel()
   const setState = setEmployerState
   const [modal, setModal] = useState(null)
   const [, setNotes] = useState('')
@@ -509,7 +509,7 @@ const close = () => { setModal(null); setNotes(''); setReviewError('') }
 
           {employerVacancies.filter(v => v.status === 'Draft').length > 0 && (
             <Alert type="warning">
-              <strong>Job posting fee required:</strong> You have draft job postings pending payment. Pay the posting fee to publish and reach matched candidates across the platform.
+              <strong>Active subscription required:</strong> Renew your fisheries recruitment subscription to publish drafts and reach matched candidates across the platform.
             </Alert>
           )}
 
@@ -878,6 +878,7 @@ const close = () => { setModal(null); setNotes(''); setReviewError('') }
 
   // Transactions & Partnerships
   if (path === 'transactions') {
+    if (tab === 'Subscription') content = <><Alert type="info">An active subscription enables publishing fisheries vacancies. Subscription plan never changes candidate matching or recommendations.</Alert><Panel title="Recruitment Subscription"><div className="profile-section-body"><Facts items={[[ 'Status', subscription?.status || 'No subscription' ], [ 'Plan', subscription?.plan || 'Choose a plan' ], [ 'Expiry', subscription?.expiryDate || '—' ], [ 'Prototype amount', subscription ? money(subscription.amount) : '—' ]]} /><div className="lgu-row-actions" style={{ marginTop: 16 }}>{['1-Month Subscription','6-Month Subscription','1-Year Subscription'].map(plan => <Button key={plan} onClick={() => attempt(() => { renewSubscription(currentEmployer.id, plan); showMessage('Subscription activated. You can now publish fisheries vacancies.') })}>{plan}</Button>)}</div></div></Panel></>
     const employerTransactions = transactions
 
     if (tab === 'Job Posting Transactions' || !tab) {
@@ -1382,7 +1383,7 @@ const close = () => { setModal(null); setNotes(''); setReviewError('') }
 
       {modal?.kind === 'edit-employer-profile' && <RecordEditor title="Edit Company Profile" record={modal.record} fields={organizationFields} onClose={close} onSave={draft => { saveOrganization(currentEmployer.id, draft); close(); showMessage('Company profile updated.') }} />}
 
-      {modal?.kind === 'lifecycle' && <ConfirmationDialog title={modal.title} description={modal.error || (modal.action === 'Publish' ? 'Confirm publication. The listing fee is recorded as a mock payment only; payment does not affect recommendations.' : 'Confirm this lifecycle change. Historical records remain visible.')} confirmLabel={modal.action} variant={modal.action === 'Delete Draft' ? 'danger' : 'primary'} onClose={close} onConfirm={() => attempt(() => { recordLifecycle('job', modal.record.id, modal.action); showMessage('Record updated.') })} />}
+      {modal?.kind === 'lifecycle' && <ConfirmationDialog title={modal.title} description={modal.error || (modal.action === 'Publish' ? 'Confirm publication. A verified organization with an active subscription may publish; subscription never affects matching.' : 'Confirm this lifecycle change. Historical records remain visible.')} confirmLabel={modal.action} variant={modal.action === 'Delete Draft' ? 'danger' : 'primary'} onClose={close} onConfirm={() => attempt(() => { recordLifecycle('job', modal.record.id, modal.action); showMessage('Record updated.') })} />}
 
     </div>
   )

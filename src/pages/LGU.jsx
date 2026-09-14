@@ -9,13 +9,13 @@ import { Analytics, Funnel, HiringOutcomes, InsightCards, OverviewMetrics, Rate 
 import './lgu/lgu.css'
 
 const modules = {
-  dashboard: { title: 'LGU Workforce Dashboard', description: 'Monitor local employment, skills development, training, entrepreneurship, and workforce trends.' },
-  people: { title: 'People & Organizations', description: 'Understand resident progress and review participating organizations.', tabs: ['Residents', 'Employers', 'Training Agencies', 'Verification Requests'] },
-  opportunities: { title: 'Opportunities', description: 'Monitor employer demand, training supply, and priority skill gaps.', tabs: ['Job Vacancies', 'Training Opportunities', 'Skills & Skill Gaps'] },
+  dashboard: { title: 'LGU Fisheries Workforce Dashboard', description: 'Monitor fisheries employment, skills development, livelihoods, and workforce trends.' },
+  people: { title: 'Fisheries People & Organizations', description: 'Understand fisheries job seeker progress and review participating organizations.', tabs: ['Residents', 'Employers', 'Training Agencies', 'Verification Requests'] },
+  opportunities: { title: 'Fisheries Opportunities', description: 'Monitor fisheries employer demand, training supply, and priority skill gaps.', tabs: ['Job Vacancies', 'Training Opportunities', 'Skills & Skill Gaps'] },
   employment: { title: 'Employment', description: 'Track applications, hiring outcomes, and platform employment placements.', tabs: ['Applications & Placements', 'Hiring Outcomes', 'Employment Placement Rate'] },
   entrepreneurship: { title: 'Entrepreneurship', description: 'Support residents from business exploration to LGU application review.', tabs: ['Entrepreneurship Pathways', 'Business Registration / Permits'] },
-  partnerships: { title: 'Transactions & Partnerships', description: 'Review mock listing fees and workforce-development partnerships.', tabs: ['Job Posting Transactions', 'Training Listing Transactions', 'Sponsorships'] },
-  analytics: { title: 'Analytics', description: 'Understand workforce patterns and consider evidence-informed LGU actions.', tabs: ['Workforce Overview', 'Employment Analytics', 'Skills & Skill Gap Analytics', 'Training Analytics', 'Entrepreneurship Analytics', 'Prescriptive Insights'] },
+  partnerships: { title: 'Subscriptions & Partnerships', description: 'Review fisheries employer and training agency subscriptions and partnerships.', tabs: ['Job Posting Transactions', 'Training Listing Transactions', 'Sponsorships'] },
+  analytics: { title: 'Fisheries Analytics', description: 'Understand fisheries workforce patterns and consider evidence-informed LGU actions.', tabs: ['Workforce Overview', 'Employment Analytics', 'Skills & Skill Gap Analytics', 'Training Analytics', 'Entrepreneurship Analytics', 'Prescriptive Insights'] },
   reports: { title: 'Reports', description: 'Preview and generate workforce reports from the demonstration snapshot.' },
   'user-management': { title: 'User Management', description: 'Manage resident, organization, and LGU staff account status.' },
   settings: { title: 'Settings', description: 'Manage LGU information and display preferences.' },
@@ -82,9 +82,9 @@ export function LGUDashboard({ page, navigate, showMessage }) {
   })[category]
   const previewReport = category => details(`${category} — Mock Report`, reportData(category), <><p className="lgu-caption">{period.label}. Employment activity uses the selected period. Other totals use the September snapshot or year-to-date cohorts. Placement rate = hires ÷ 842 active registered job seekers × 100. Training outcomes describe association, not causation.</p><Alert>Demonstration report for LGU review. Business review statuses are mock workflow records.</Alert></>, 'lg')
   const exportReport = category => {
-    const csv = [['EntritifAI Mock Report', category], ['Reporting Period', period.label], ['Scope', 'Employment: selected period; other measures: September snapshot or year-to-date cohorts'], ['Placement Rate Denominator', '842 active registered job seekers'], ...reportData(category)].map(row => row.map(v => `"${String(v).replaceAll('"', '""')}"`).join(',')).join('\r\n')
+    const csv = [['EntretifAI Mock Report', category], ['Reporting Period', period.label], ['Scope', 'Employment: selected period; other measures: September snapshot or year-to-date cohorts'], ['Placement Rate Denominator', '842 active registered job seekers'], ...reportData(category)].map(row => row.map(v => `"${String(v).replaceAll('"', '""')}"`).join(',')).join('\r\n')
     const url = URL.createObjectURL(new Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8;' }))
-    const anchor = document.createElement('a'); anchor.href = url; anchor.download = `EntritifAI-${category.replaceAll(' ', '-')}-mock.csv`; anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 1000)
+    const anchor = document.createElement('a'); anchor.href = url; anchor.download = `EntretifAI-${category.replaceAll(' ', '-')}-mock.csv`; anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 1000)
     showMessage('Mock report exported as CSV.')
   }
 

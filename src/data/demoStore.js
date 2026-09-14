@@ -22,21 +22,19 @@ function initialState() {
   const oldEmployer = read('entritifai-employer-phase3-v1') || {}
   const oldTraining = read('entritifai-training-phase4-v1') || {}
   const orgs = (oldLGU.orgs || lgu.organizations).map(o => ({ ...(o.id === employer.currentEmployer.id ? employer.currentEmployer : o.id === training.currentAgency.id ? training.currentAgency : {}), ...o }))
-  let jobs = lgu.vacancies.map(v => {
-    const richer = employer.employerVacancies.find(j => j.id === v.id) || {}
-    const rec = resident.recommendedJobs.find(j => j.id === v.id) || {}
-    return { location: 'San Jose, Occidental Mindoro', employmentType: 'Full-time', experienceLevel: 'Entry Level', requiredSkills: v.skillIds.map(id => lgu.skills.find(s => s.id === id).name), preferredSkills: [], responsibilities: [], requirements: [], paymentStatus: 'Paid', salary: { min: 18000, max: 28000 }, ...rec, ...v, ...richer, id: v.id, title: richer.title || v.name, employerId: orgs.find(o => o.name === v.employer)?.id || 'E-002', baseApplicants: v.applicants, skillIds: v.skillIds }
-  })
-  jobs = merge([...jobs, ...employer.employerVacancies.filter(v => !jobs.some(j => j.id === v.id)).map(v => ({ ...v, employerId: 'E-002', skillIds: skillIds(v.requiredSkills), baseApplicants: v.applicants || 0 })), ...(oldEmployer.vacancies || []).map(v => ({ ...v, employerId: 'E-002', skillIds: skillIds(v.requiredSkills), baseApplicants: 0 }))])
-  let registrations = merge([...resident.myTraining, ...(oldResident.myTraining || []), ...(oldTraining.participants || [])].map(asRegistration), r => `${r.residentId}/${r.programId}`)
+  let jobs = lgu.vacancies.map(v => ({ location: 'San Jose, Occidental Mindoro', employmentType: 'Full-time', experienceLevel: 'Entry Level', requiredSkills: v.skillIds.map(id => lgu.skills.find(s => s.id === id).name), preferredSkills: [], responsibilities: [], requirements: [], salary: { min: 14000, max: 24000 }, ...v, id: v.id, title: v.name, employerId: orgs.find(o => o.name === v.employer)?.id || 'E-002', baseApplicants: v.applicants, skillIds: v.skillIds }))
+  jobs = merge([...jobs, ...(oldEmployer.vacancies || []).filter(v => !/IT Support|Network|Digital Marketing/i.test(v.title || '')).map(v => ({ ...v, employerId: 'E-002', skillIds: skillIds(v.requiredSkills), baseApplicants: 0 }))])
+  let registrations = merge([...(oldResident.myTraining || []), ...(oldTraining.participants || [])].map(asRegistration), r => `${r.residentId}/${r.programId}`)
   const programs = merge([...lgu.programs.map(p => {
     const rec = resident.recommendedTraining.find(r => r.id === p.id) || {}
     return { description: 'Skills development for local residents.', duration: '40 Hours', location: 'San Jose, Occidental Mindoro', requirements: ['Basic computer literacy'], objectives: [], targetAudience: 'Interested residents', instructor: 'Agency training team', timeSlot: '09:00–12:00', paymentStatus: 'Paid', ...rec, ...p, agencyId: orgs.find(o => o.name === p.agency)?.id, baseRegistrations: p.registrations - registrations.filter(r => r.programId === p.id && r.status !== 'Cancelled').length, baseCompleted: p.completed }
   }), ...(oldTraining.programs || []).map(p => ({ ...p, agencyId: 'T-001', skillIds: skillIds(p.skillIds), baseRegistrations: Math.max(0, (p.registrations || 0) - registrations.filter(r => r.programId === p.id && r.status !== 'Cancelled').length), baseCompleted: p.completions || 0 }))])
   registrations = registrations.filter(r => programs.some(p => p.id === r.programId))
-  const applications = merge([...employer.applications, ...resident.applications, ...(oldResident.applications || [])].map(asApplication), a => `${a.residentId}/${a.jobId}`)
+  const applications = merge([...(oldResident.applications || [])].filter(a => jobs.some(j => j.id === (a.jobId || a.vacancyId))).map(asApplication), a => `${a.residentId}/${a.jobId}`)
   const businesses = merge([...(oldLGU.businesses || lgu.businesses), ...(oldResident.businessApplication ? [{ ...oldResident.businessApplication, name: oldResident.businessApplication.businessName, type: oldResident.businessApplication.businessType }] : [])]).map(b => ({ ...b, residentId: b.residentId || (b.applicant === resident.demoResident.name ? 'R-001' : lgu.residents.find(r => r.name === b.applicant)?.id), documents: b.documents || [], history: b.history || [] }))
-  const profile = copy(oldResident.profile || resident.demoResident)
+  const fisheriesSeed = { id: 'R-001', name: 'Juan Dela Cruz', email: 'juan.delacruz@email.com', phone: '+63 912 345 6789', location: 'Poblacion, San Jose, Occidental Mindoro', employmentStatus: 'Seeking Employment', availability: 'Immediate', profileCompletion: 92, educationEntries: [{ id: 'EDU-FISH-1', level: "Bachelor's Degree", course: 'BS Fisheries', school: 'Occidental Mindoro State College', yearCompleted: '2025' }], skills: [{ id: 'SKILL-FISH-1', name: 'Aquaculture Operations', level: 'Intermediate', category: 'Aquaculture' }, { id: 'SKILL-FISH-2', name: 'Fish Feeding Management', level: 'Intermediate', category: 'Aquaculture' }, { id: 'SKILL-FISH-3', name: 'Fish Handling and Post-Harvest', level: 'Beginner', category: 'Post-Harvest' }], experience: [{ id: 'EXP-FISH-1', position: 'Tilapia Farm Assistant', organization: 'San Jose Demonstration Farm', startDate: '2023-06-01', endDate: '2025-08-31', responsibilities: 'Supported feeding, pond preparation, harvesting and farm records.' }], certifications: [{ id: 'CERT-FISH-1', name: 'Aquaculture NC II', issuingOrganization: 'TESDA', dateIssued: '2025-05-01' }], careerInterests: ['Aquaculture', 'Fish Farming'], entrepreneurship: { interested: true, businessIdea: 'Small-scale Tilapia Farming', businessName: 'Juan’s Tilapia Grow-out', availableResources: 'Small fishpond access, nets and feeding tools', estimatedCapital: 30000, assistanceNeeded: ['Water quality training', 'Business permit assistance', 'Capital guidance'] } }
+  const storedProfile = oldResident.profile
+  const profile = copy(storedProfile && !/Information Technology|Computer Repair|Network/i.test(JSON.stringify(storedProfile)) ? storedProfile : fisheriesSeed)
   // Ensure educationEntries array exists (convert from single education object if needed)
   if (!profile.educationEntries && profile.education) {
     profile.educationEntries = [{ id: uid('EDU'), ...profile.education }]
@@ -53,12 +51,13 @@ function initialState() {
   profile.experience = profile.experience.map((e) => ({ ...e, id: e.id?.toString() || uid('EXP'), startDate: /^\d{4}-/.test(e.startDate) ? e.startDate : '2023-06-01', endDate: /^\d{4}-/.test(e.endDate) ? e.endDate : '2025-08-31' }))
   profile.certifications = profile.certifications.map((c) => ({ ...c, id: c.id?.toString() || uid('CERT'), dateIssued: /^\d{4}-/.test(c.dateIssued) ? c.dateIssued : '2025-05-01' }))
   const interviews = employer.interviews.filter(i => applications.some(a => a.id === i.applicationId)).map(i => ({ ...i, jobId: i.vacancyId }))
-  const state = { version: 1, orgs, profiles: { 'R-001': profile }, jobs, programs, applications, registrations, interviews, businesses, placements: copy(lgu.placements), transactions: copy(lgu.transactions), sponsors: copy(lgu.sponsors), users: copy(oldLGU.users || lgu.initialUsers), settings: { lgu: oldLGU.settings || { name: 'Municipality of San Jose', province: 'Occidental Mindoro', region: 'MIMAROPA', office: 'Public Employment Service Office', email: 'peso@sanjose.example.test', phone: '043 555 0100', address: 'Municipal Hall, San Jose', density: 'Comfortable', period: 'This Year' }, resident: { emailNotifications: true }, employer: oldEmployer.settings || { emailNotifications: { matches: true, applications: true, interviews: true, summary: false } }, training: oldTraining.settings || { emailNotifications: { registrations: true, completions: true, payments: true, summary: false } } }, activeEmployerId: 'E-002', activeAgencyId: 'T-001', notifications: { resident: copy(resident.notifications), employer: copy(employer.employerNotifications), training: copy(training.trainingNotifications), lgu: copy(read('entritifai-lgu-notifications-v1') || lgu.lguNotifications) }, invitations: [] }
+  const subscriptions = [{ id: 'SUB-E-002', organizationId: 'E-002', organizationType: 'Employer', plan: '1-Year Subscription', startDate: '2026-01-01', expiryDate: '2026-12-31', status: 'Active', amount: 6000, createdAt: '2026-01-01', renewedAt: '2026-01-01' }, { id: 'SUB-T-001', organizationId: 'T-001', organizationType: 'Training Agency', plan: '6-Month Subscription', startDate: '2026-07-01', expiryDate: '2026-12-31', status: 'Active', amount: 3600, createdAt: '2026-07-01', renewedAt: '2026-07-01' }]
+  const state = { version: 2, orgs, profiles: { 'R-001': profile }, jobs, programs, applications, registrations, interviews, businesses, placements: copy(lgu.placements), transactions: copy(lgu.transactions), subscriptions, sponsors: copy(lgu.sponsors), users: copy(oldLGU.users || lgu.initialUsers), settings: { lgu: oldLGU.settings || { name: 'Municipality of San Jose', province: 'Occidental Mindoro', region: 'MIMAROPA', office: 'Fisheries and Employment Assistance Desk', email: 'peso@sanjose.example.test', phone: '043 555 0100', address: 'Municipal Hall, San Jose', density: 'Comfortable', period: 'This Year' }, resident: { emailNotifications: true }, employer: oldEmployer.settings || { emailNotifications: { matches: true, applications: true, interviews: true, summary: false } }, training: oldTraining.settings || { emailNotifications: { registrations: true, completions: true, payments: true, summary: false } } }, activeEmployerId: 'E-002', activeAgencyId: 'T-001', notifications: { resident: [], employer: [], training: [], lgu: copy(lgu.lguNotifications) }, invitations: [] }
   state.baseline = { applications: applications.length, shortlisted: applications.filter(a => a.status === 'Shortlisted' || a.status === 'Interview Scheduled').length, interviews: interviews.length, placements: state.placements.length, registrations: registrations.filter(r => r.status !== 'Cancelled').length, completions: registrations.filter(r => r.status === 'Completed').length, activeJobs: jobs.filter(j => j.status === 'Active').length, verifiedEmployers: orgs.filter(o => o.type === 'Employer' && o.status === 'Verified').length, verifiedAgencies: orgs.filter(o => o.type === 'Training Agency' && o.status === 'Verified').length, jobs: jobs.map(j => ({ id: j.id, applicantCount: applications.filter(a => a.jobId === j.id).length })) }
   return state
 }
 function upgradeIntelligence(s) {
-  if (s.intelligenceVersion === 1) return s
+  if (s.intelligenceVersion === 2) return s
   const profiles = { ...s.profiles }
   for (const candidate of employer.candidateMatches) {
     if (profiles[candidate.residentId]) continue
@@ -71,10 +70,10 @@ function upgradeIntelligence(s) {
   const programs = s.programs.map(p => ({ ...p, name: p.id === 'TR-001' && p.name === 'Network Administration Training' ? 'Network Administration Fundamentals' : p.name, developedLevel: p.developedLevel || 'Intermediate', prerequisiteSkills: p.prerequisiteSkills || [] }))
   const transactions = s.transactions.map(t => { const org = s.orgs.find(o => o.name === t.organization); const item = (t.kind === 'job' ? jobs : programs).find(r => (r.title || r.name) === t.item || r.id === 'TR-001' && t.item === 'Network Administration Training'); return { ...t, organizationId: t.organizationId || org?.id, itemId: t.itemId || item?.id } })
   const notifications = Object.fromEntries(Object.entries(s.notifications).map(([role, rows]) => [role, rows.filter(n => !/92% match|completed Network Configuration|new candidate matches/i.test(n.message || '')).map(n => ({ ...n, message: (n.message || '').replaceAll('Network Administration Training', 'Network Administration Fundamentals') }))]))
-  return { ...s, jobs, programs, profiles, transactions, notifications, intelligenceVersion: 1, intelligenceBaseline: { jobs: copy(jobs), profiles: copy(profiles) }, reassessment: { previousProfile: copy(profiles['R-001']), date: today(), reason: 'Initial career profile' } }
+  return { ...s, version: 2, jobs, programs, profiles, transactions, subscriptions: s.subscriptions || [], notifications, intelligenceVersion: 2, intelligenceBaseline: { jobs: copy(jobs), profiles: copy(profiles) }, reassessment: { previousProfile: copy(profiles['R-001']), date: today(), reason: 'Initial fisheries profile' } }
 }
 let state = read(DEMO_KEY)
-if (!state?.version || !state?.baseline) state = initialState()
+if (state?.version !== 2 || !state?.baseline) state = initialState()
 state = upgradeIntelligence(state)
 const listeners = new Set()
 const subscribe = fn => { listeners.add(fn); return () => listeners.delete(fn) }
@@ -86,7 +85,7 @@ export function updateDemo(updater) {
   listeners.forEach(fn => fn())
 }
 export function useDemoStore() { return useSyncExternalStore(subscribe, getDemoState, getDemoState) }
-window.addEventListener('storage', event => { if (event.key === DEMO_KEY && event.newValue) { const next = read(DEMO_KEY); if (next?.version === 1) { state = upgradeIntelligence(next); listeners.forEach(fn => fn()) } } })
+window.addEventListener('storage', event => { if (event.key === DEMO_KEY && event.newValue) { const next = read(DEMO_KEY); if (next?.version === 2) { state = upgradeIntelligence(next); listeners.forEach(fn => fn()) } } })
 export function setActor(role, id) { updateDemo(s => ({ ...s, [role === 'employer' ? 'activeEmployerId' : 'activeAgencyId']: id })) }
 function notify(s, role, title, message, link, type = 'application') {
   return { ...s, notifications: { ...s.notifications, [role]: [{ id: uid('N'), type, title, message, date: today(), link: `/${role}/${link}`, read: false }, ...s.notifications[role]] } }
@@ -184,10 +183,29 @@ export function recordLifecycle(kind, id, action) {
   if (action === 'Publish') {
     ensure(s.orgs.find(o => o.id === owner)?.status === 'Verified', 'LGU verification is required before publication.')
     ensure(activeAccount(s, owner), 'This account is inactive.')
+    const subscription = s.subscriptions?.find(row => row.organizationId === owner)
+    ensure(subscription?.status === 'Active' && subscription.expiryDate >= today(), 'An active subscription is required before publishing. Renew your subscription to continue.')
     ensure(jobs ? record.deadline >= today() : record.schedule.slice(0, 10) >= today(), 'Update the date before publishing.')
-    if (record.paymentStatus !== 'Paid') next = { ...s, transactions: [...s.transactions, { id: uid(jobs ? 'JP' : 'TL'), kind: jobs ? 'job' : 'training', organizationId: owner, itemId: id, organization: s.orgs.find(o => o.id === owner)?.name, item: jobs ? record.title : record.name, amount: jobs ? 500 : 300, status: 'Paid', date: today(), publication: 'Published' }] }
   }
-  updateDemo(notify({ ...next, [key]: next[key].map(r => r.id === id ? { ...r, status: action === 'Publish' ? jobs ? 'Active' : 'Upcoming' : 'Closed', published: action === 'Publish' ? today() : r.published, paymentStatus: action === 'Publish' ? 'Paid' : r.paymentStatus } : r) }, 'lgu', action === 'Publish' ? 'New opportunity published' : 'Opportunity closed', jobs ? record.title : record.name, `opportunities?tab=${jobs ? 'Job%20Vacancies' : 'Training%20Opportunities'}`, jobs ? 'job_match' : 'training'))
+  updateDemo(notify({ ...next, [key]: next[key].map(r => r.id === id ? { ...r, status: action === 'Publish' ? jobs ? 'Active' : 'Upcoming' : 'Closed', published: action === 'Publish' ? today() : r.published } : r) }, 'lgu', action === 'Publish' ? 'New fisheries opportunity published' : 'Opportunity closed', jobs ? record.title : record.name, `opportunities?tab=${jobs ? 'Job%20Vacancies' : 'Training%20Opportunities'}`, jobs ? 'job_match' : 'training'))
+}
+export function subscriptionFor(organizationId) {
+  return state.subscriptions?.find(row => row.organizationId === organizationId)
+}
+export function renewSubscription(organizationId, plan) {
+  const prices = { '1-Month Subscription': 1000, '6-Month Subscription': 5000, '1-Year Subscription': 9000 }
+  ensure(prices[plan], 'Choose a valid subscription plan.')
+  const organization = state.orgs.find(row => row.id === organizationId)
+  ensure(organization, 'Organization not found.')
+  const months = plan.startsWith('1-') ? 1 : plan.startsWith('6-') ? 6 : 12
+  const start = today(), expiry = new Date(`${start}T00:00:00`)
+  expiry.setMonth(expiry.getMonth() + months)
+  const expiryDate = expiry.toLocaleDateString('en-CA')
+  const previous = subscriptionFor(organizationId)
+  const record = { id: previous?.id || uid('SUB'), organizationId, organizationType: organization.type, plan, startDate: start, expiryDate, status: 'Active', amount: prices[plan], createdAt: previous?.createdAt || start, renewedAt: start }
+  const subscriptions = previous ? state.subscriptions.map(row => row.organizationId === organizationId ? record : row) : [...(state.subscriptions || []), record]
+  const role = organization.type === 'Employer' ? 'employer' : 'training'
+  updateDemo(notify({ ...state, subscriptions }, role, 'Subscription activated', `${plan} is active until ${expiryDate}. Publishing is now available.`, 'transactions', 'payment'))
 }
 export function saveOrganization(id, draft) {
   updateDemo(s => ({ ...s, orgs: s.orgs.map(o => o.id === id ? { ...o, ...draft, id: o.id, status: o.status, type: o.type } : o) }))
